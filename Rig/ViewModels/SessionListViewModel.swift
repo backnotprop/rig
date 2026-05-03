@@ -45,7 +45,7 @@ final class SessionListViewModel: ObservableObject {
         }
     }
 
-    func createSession() async {
+    func createSession(workingDirectory: String? = nil) async {
         guard !isCreatingSession else { return }
         isCreatingSession = true
         focusTask?.cancel()
@@ -55,7 +55,8 @@ final class SessionListViewModel: ObservableObject {
         do {
             let ordinal = nextSessionOrdinal
             let label = "Session \(ordinal)"
-            let createdSurface = try await controller.createWindow(workingDirectory: homeDirectory)
+            let cwd = workingDirectory ?? homeDirectory
+            let createdSurface = try await controller.createWindow(workingDirectory: cwd)
             nextSessionOrdinal = ordinal + 1
 
             let session = GhosttySession(

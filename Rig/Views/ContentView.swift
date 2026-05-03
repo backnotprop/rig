@@ -1,14 +1,49 @@
+import AppKit
 import SwiftUI
+
+private struct VisualEffectBackground: NSViewRepresentable {
+    var material: NSVisualEffectView.Material
+    var blendingMode: NSVisualEffectView.BlendingMode
+
+    func makeNSView(context: Context) -> NSVisualEffectView {
+        let view = NSVisualEffectView()
+        view.material = material
+        view.blendingMode = blendingMode
+        view.state = .active
+        view.isEmphasized = false
+        view.autoresizingMask = [.width, .height]
+        return view
+    }
+
+    func updateNSView(_ nsView: NSVisualEffectView, context: Context) {
+        nsView.material = material
+        nsView.blendingMode = blendingMode
+    }
+}
 
 struct ContentView: View {
     @EnvironmentObject private var viewModel: SessionListViewModel
+    @EnvironmentObject private var projects: ProjectsViewModel
     @FocusState private var isListFocused: Bool
     @Namespace private var glassNamespace
 
     var body: some View {
         GlassEffectContainer(spacing: 8) {
             VStack(spacing: 8) {
-                toolbar
+                ZStack(alignment: .leading) {
+                    LauncherRowView(
+                        harnesses: LauncherHarness.defaults,
+                        isDisabled: viewModel.isCreatingSession,
+                        onTap: { _ in
+                            let cwd = projects.selectedProject?.path
+                            Task { await viewModel.createSession(workingDirectory: cwd) }
+                        }
+                    )
+
+                    ProjectSelectorView()
+                        .padding(.leading, 4)
+                }
+                .padding(.top, 28)
 
                 if viewModel.sessions.isEmpty {
                     emptyState
@@ -25,11 +60,13 @@ struct ContentView: View {
                 idealHeight: 360,
                 maxHeight: .infinity
             )
-            .glassEffect(
-                .regular.tint(.white.opacity(0.08)),
-                in: Rectangle()
+            .background(
+                VisualEffectBackground(
+                    material: .hudWindow,
+                    blendingMode: .behindWindow
+                )
+                .overlay(Color.white.opacity(0.04))
             )
-            .glassEffectID("rig-shell", in: glassNamespace)
         }
         .frame(
             minWidth: 176,
@@ -69,44 +106,16 @@ struct ContentView: View {
         }
     }
 
-    private var toolbar: some View {
-        HStack {
-            Spacer(minLength: 0)
-
-            Button {
-                Task { await viewModel.createSession() }
-            } label: {
-                ZStack {
-                    Circle().fill(Color.black)
-                    if viewModel.isCreatingSession {
-                        Image(systemName: "hourglass")
-                            .font(.system(size: 15, weight: .semibold))
-                            .foregroundStyle(.white)
-                    } else {
-                        PiLogoShape()
-                            .fill(Color.white, style: FillStyle(eoFill: true))
-                            .frame(width: 18, height: 18)
-                    }
-                }
-                .frame(width: 34, height: 34)
-                .contentTransition(.symbolEffect(.replace))
-            }
-            .buttonStyle(.plain)
-            .disabled(viewModel.isCreatingSession)
-            .help("New Session")
-        }
-        .padding(.horizontal, 6)
-        .padding(.top, 6)
-    }
-
     private var emptyState: some View {
         Spacer()
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .overlay(alignment: .center) {
-                Image(systemName: "terminal")
-                    .font(.system(size: 22, weight: .medium))
-                    .foregroundStyle(.secondary)
-                    .symbolEffect(.pulse, value: viewModel.isCreatingSession)
+                Image("Truck")
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+                    .frame(width: 64, height: 64)
+                    .foregroundStyle(.tertiary)
+                    .opacity(0.6)
                     .accessibilityHidden(true)
             }
     }
@@ -143,49 +152,14 @@ struct ContentView: View {
     }
 }
 
-struct PiLogoShape: Shape {
-    func path(in rect: CGRect) -> Path {
-        let scale = min(rect.width, rect.height) / 800.0
-        let xOffset = rect.minX + (rect.width - 800 * scale) / 2
-        let yOffset = rect.minY + (rect.height - 800 * scale) / 2
-
-        func p(_ x: CGFloat, _ y: CGFloat) -> CGPoint {
-            CGPoint(x: x * scale + xOffset, y: y * scale + yOffset)
-        }
-
-        var path = Path()
-
-        path.move(to: p(165.29, 165.29))
-        path.addLine(to: p(517.36, 165.29))
-        path.addLine(to: p(517.36, 400))
-        path.addLine(to: p(400, 400))
-        path.addLine(to: p(400, 517.36))
-        path.addLine(to: p(282.65, 517.36))
-        path.addLine(to: p(282.65, 634.72))
-        path.addLine(to: p(165.29, 634.72))
-        path.closeSubpath()
-
-        path.move(to: p(282.65, 282.65))
-        path.addLine(to: p(282.65, 400))
-        path.addLine(to: p(400, 400))
-        path.addLine(to: p(400, 282.65))
-        path.closeSubpath()
-
-        path.move(to: p(517.36, 400))
-        path.addLine(to: p(634.72, 400))
-        path.addLine(to: p(634.72, 634.72))
-        path.addLine(to: p(517.36, 634.72))
-        path.closeSubpath()
-
-        return path
-    }
-}
-
 #Preview {
     ContentView()
         .environmentObject(SessionListViewModel(
             controller: PreviewGhosttyController(),
             store: SessionStore(fileURL: URL(fileURLWithPath: "/tmp/rig-preview.json"))
+        ))
+        .environmentObject(ProjectsViewModel(
+            storeURL: URL(fileURLWithPath: "/tmp/rig-preview-projects.json")
         ))
 }
 

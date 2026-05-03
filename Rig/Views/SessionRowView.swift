@@ -23,19 +23,9 @@ struct SessionRowView: View {
             let shape = RoundedRectangle(cornerRadius: 18, style: .continuous)
 
             if isSelected {
-                shape
-                    .fill(.clear)
-                    .glassEffect(
-                        .regular.tint(.white.opacity(0.12)).interactive(true),
-                        in: shape
-                    )
-                    .glassEffectID("selected-session", in: glassNamespace)
-                    .glassEffectTransition(.matchedGeometry)
+                shape.fill(Color.white.opacity(0.12))
             } else if isHovered {
-                shape
-                    .fill(.clear)
-                    .glassEffect(.clear.interactive(true), in: shape)
-                    .glassEffectTransition(.materialize)
+                shape.fill(Color.white.opacity(0.05))
             }
         }
         .onHover { isHovered = $0 }

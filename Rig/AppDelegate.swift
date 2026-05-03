@@ -2,8 +2,15 @@ import AppKit
 import SwiftUI
 
 final class RigPanel: NSPanel {
+    var customResizeDuration: TimeInterval = 0.4
     override var canBecomeKey: Bool { true }
     override var canBecomeMain: Bool { true }
+    override func animationResizeTime(_ newFrame: NSRect) -> TimeInterval {
+        customResizeDuration
+    }
+    override func constrainFrameRect(_ frameRect: NSRect, to screen: NSScreen?) -> NSRect {
+        frameRect
+    }
 }
 
 @MainActor
@@ -12,6 +19,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         controller: AppleScriptGhosttyController(),
         store: SessionStore()
     )
+    let projectsViewModel = ProjectsViewModel()
 
     private var panel: RigPanel?
     private var autoHide: RigAutoHideController?
@@ -42,7 +50,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         )
 
         panel.contentView = NSHostingView(
-            rootView: ContentView().environmentObject(viewModel)
+            rootView: ContentView()
+                .environmentObject(viewModel)
+                .environmentObject(projectsViewModel)
         )
 
         panel.title = "Rig"
@@ -71,6 +81,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         DispatchQueue.main.async { [weak self] in
             self?.positionTrafficLights(in: panel)
         }
+
+        projectsViewModel.start()
 
         Task { @MainActor [viewModel] in
             await viewModel.start()

@@ -10,10 +10,12 @@ final class RigAutoHideController {
     private var hiddenFrame: NSRect = .zero
     private(set) var isRevealed = true
 
-    private let animationDuration: TimeInterval = 0.18
+    private let animationDuration: TimeInterval = 0.40
     private let hideGracePeriod: TimeInterval = 0.3
     private let initialPeekDuration: TimeInterval = 1.5
-    private let triggerWidth: CGFloat = 2
+    private let triggerWidth: CGFloat = 1
+    private let revealDelay: TimeInterval = 0.6
+    private var revealWorkItem: DispatchWorkItem?
 
     init(panel: NSPanel, panelWidth: CGFloat = 240) {
         self.panel = panel
@@ -113,7 +115,8 @@ final class RigAutoHideController {
         trigger.ignoresMouseEvents = false
 
         let triggerView = TriggerView(frame: NSRect(origin: .zero, size: triggerRect.size))
-        triggerView.onMouseEntered = { [weak self] in self?.reveal() }
+        triggerView.onMouseEntered = { [weak self] in self?.scheduleReveal() }
+        triggerView.onMouseExited = { [weak self] in self?.cancelScheduledReveal() }
         trigger.contentView = triggerView
 
         trigger.orderFrontRegardless()
@@ -136,20 +139,35 @@ final class RigAutoHideController {
         panel.setFrame(isRevealed ? revealedFrame : hiddenFrame, display: true)
     }
 
+    private func scheduleReveal() {
+        cancelScheduledReveal()
+        guard !isRevealed else {
+            cancelHide()
+            return
+        }
+        let item = DispatchWorkItem { [weak self] in self?.reveal() }
+        revealWorkItem = item
+        DispatchQueue.main.asyncAfter(deadline: .now() + revealDelay, execute: item)
+    }
+
+    private func cancelScheduledReveal() {
+        revealWorkItem?.cancel()
+        revealWorkItem = nil
+    }
+
     private func reveal() {
         cancelHide()
+        cancelScheduledReveal()
         guard !isRevealed else { return }
         isRevealed = true
         if !panel.isVisible {
             panel.setFrame(hiddenFrame, display: false)
             panel.orderFrontRegardless()
         }
-        NSAnimationContext.runAnimationGroup { context in
-            context.duration = animationDuration
-            context.timingFunction = CAMediaTimingFunction(name: .easeOut)
-            context.allowsImplicitAnimation = true
-            panel.animator().setFrame(revealedFrame, display: true)
+        if let rigPanel = panel as? RigPanel {
+            rigPanel.customResizeDuration = animationDuration
         }
+        panel.setFrame(revealedFrame, display: true, animate: true)
     }
 
     private func scheduleHide(after delay: TimeInterval? = nil) {
@@ -172,15 +190,14 @@ final class RigAutoHideController {
     private func hideNow() {
         guard isRevealed else { return }
         isRevealed = false
-        NSAnimationContext.runAnimationGroup({ [panel, hiddenFrame, animationDuration] context in
-            context.duration = animationDuration
-            context.timingFunction = CAMediaTimingFunction(name: .easeIn)
-            context.allowsImplicitAnimation = true
-            panel.animator().setFrame(hiddenFrame, display: true)
-        }, completionHandler: { [weak self] in
+        if let rigPanel = panel as? RigPanel {
+            rigPanel.customResizeDuration = animationDuration
+        }
+        panel.setFrame(hiddenFrame, display: true, animate: true)
+        DispatchQueue.main.asyncAfter(deadline: .now() + animationDuration + 0.02) { [weak self] in
             guard let self, !self.isRevealed else { return }
             self.panel.orderOut(nil)
-        })
+        }
     }
 }
 
@@ -215,6 +232,7 @@ private final class AutoHideContainerView: NSView {
 
 private final class TriggerView: NSView {
     var onMouseEntered: (() -> Void)?
+    var onMouseExited: (() -> Void)?
     private var trackingArea: NSTrackingArea?
 
     override func updateTrackingAreas() {
@@ -234,5 +252,9 @@ private final class TriggerView: NSView {
 
     override func mouseEntered(with event: NSEvent) {
         onMouseEntered?()
+    }
+
+    override func mouseExited(with event: NSEvent) {
+        onMouseExited?()
     }
 }
