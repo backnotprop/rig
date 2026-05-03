@@ -21,6 +21,9 @@ enum GhosttyControllerError: LocalizedError {
     }
 }
 
+// Why @MainActor: NSAppleScript.executeAndReturnError needs a thread with a CFRunLoop.
+// Off-main it returns stale `front window` references and the "click + → focuses host
+// terminal" bug returns. Don't refactor to `actor`.
 @MainActor
 final class AppleScriptGhosttyController: GhosttyControlling {
     private let decoder = JSONDecoder()
@@ -89,6 +92,11 @@ final class AppleScriptGhosttyController: GhosttyControlling {
 
             if targetTerm is missing value then error "Rig could not verify the newly created Ghostty terminal."
 
+            -- Note: no `activate` here. We focus the new terminal and rely on
+            -- `focus` to bring its window forward. If we activate Ghostty before
+            -- creating the new window, macOS targets Ghostty's existing frontmost
+            -- window's Space (e.g. a full-screen host) and yanks the user there
+            -- before our new window even exists.
             select tab targetTab
             focus targetTerm
 

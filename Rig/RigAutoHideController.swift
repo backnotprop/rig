@@ -51,6 +51,10 @@ final class RigAutoHideController {
             width: panelWidth,
             height: screenFrame.height
         )
+        // Why -200: belt-and-suspenders past macOS's off-screen clamp. RigPanel
+        // overrides constrainFrameRect to disable the clamp, but the extra buffer
+        // also protects against any residual clamping on Spaces / multi-display
+        // edge cases where the override may not run.
         hiddenFrame = NSRect(
             x: screenFrame.minX - panelWidth - 200,
             y: screenFrame.minY,

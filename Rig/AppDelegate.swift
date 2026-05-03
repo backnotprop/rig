@@ -5,9 +5,18 @@ final class RigPanel: NSPanel {
     var customResizeDuration: TimeInterval = 0.4
     override var canBecomeKey: Bool { true }
     override var canBecomeMain: Bool { true }
+
+    // Why: NSWindow's animator() silently ignores NSAnimationContext.duration for
+    // setFrame, so the autohide slide uses setFrame(_:display:animate:) instead, which
+    // honors this override. Without it, the slide is the system default (~0.2s, scaled
+    // by frame delta) and looks instant.
     override func animationResizeTime(_ newFrame: NSRect) -> TimeInterval {
         customResizeDuration
     }
+
+    // Why: macOS auto-clamps off-screen window frames to keep windows partially visible
+    // (~50px). That clamp truncates our hidden-frame slide so the panel "stops at 50px
+    // and disappears" mid-animation. Returning frameRect unchanged disables it.
     override func constrainFrameRect(_ frameRect: NSRect, to screen: NSScreen?) -> NSRect {
         frameRect
     }

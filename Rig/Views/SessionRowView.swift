@@ -19,6 +19,10 @@ struct SessionRowView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, 14)
         .contentShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+        // Why plain tinted fills (not .glassEffect): the panel background is already
+        // an NSVisualEffectView. Stacking SwiftUI .glassEffect on top produces an
+        // intensely over-blurred result ("glass on glass") that Apple's docs explicitly
+        // warn against.
         .background {
             let shape = RoundedRectangle(cornerRadius: 18, style: .continuous)
 

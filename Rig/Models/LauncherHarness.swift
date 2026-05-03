@@ -27,6 +27,10 @@ extension LauncherHarness {
             assetName: "Claude",
             background: .black
         ),
+        // Codex asset is a PNG (not SVG) rendered by `rsvg-convert` (librsvg).
+        // Its source SVG uses linearGradient gradientUnits="userSpaceOnUse" which both
+        // Xcode's vector preservation and CoreSVG mishandle, and qlmanage silently
+        // serves a generic-thumbnail fallback regardless of input. See AGENT_NOTES.md.
         LauncherHarness(
             id: "codex",
             label: "Codex",

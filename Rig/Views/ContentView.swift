@@ -1,6 +1,11 @@
 import AppKit
 import SwiftUI
 
+// Why NSVisualEffectView (not SwiftUI .glassEffect): on macOS 26 (Tahoe), SwiftUI's
+// .glassEffect uses NSGlassEffectView, which caches its sampled behind-window content
+// and doesn't reliably invalidate when other apps' windows move/close. Result: ghost
+// shadows. NSVisualEffectView with .behindWindow blendingMode is the canonical AppKit
+// primitive that gets compositor-driven invalidation.
 private struct VisualEffectBackground: NSViewRepresentable {
     var material: NSVisualEffectView.Material
     var blendingMode: NSVisualEffectView.BlendingMode
