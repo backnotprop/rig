@@ -18,6 +18,7 @@
 		B00000000000000000000009 /* SessionStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000109 /* SessionStore.swift */; };
 		B0000000000000000000000A /* SessionListViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000010A /* SessionListViewModel.swift */; };
 		B0000000000000000000000B /* RigTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000010C /* RigTests.swift */; };
+		B0000000000000000000000C /* RigAutoHideController.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000010E /* RigAutoHideController.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -46,6 +47,7 @@
 		A0000000000000000000010B /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		A0000000000000000000010C /* RigTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RigTests.swift; sourceTree = "<group>"; };
 		A0000000000000000000010D /* Rig.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Rig.entitlements; sourceTree = "<group>"; };
+		A0000000000000000000010E /* RigAutoHideController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RigAutoHideController.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -89,6 +91,7 @@
 			children = (
 				A00000000000000000000101 /* RigApp.swift */,
 				A00000000000000000000102 /* AppDelegate.swift */,
+				A0000000000000000000010E /* RigAutoHideController.swift */,
 				A00000000000000000000005 /* Controllers */,
 				A00000000000000000000006 /* Models */,
 				A00000000000000000000007 /* Persistence */,
@@ -251,6 +254,7 @@
 			files = (
 				B00000000000000000000001 /* RigApp.swift in Sources */,
 				B00000000000000000000002 /* AppDelegate.swift in Sources */,
+				B0000000000000000000000C /* RigAutoHideController.swift in Sources */,
 				B00000000000000000000005 /* GhosttySession.swift in Sources */,
 				B00000000000000000000006 /* GhosttyState.swift in Sources */,
 				B00000000000000000000007 /* GhosttyController.swift in Sources */,

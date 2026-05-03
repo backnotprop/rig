@@ -76,12 +76,22 @@ struct ContentView: View {
             Button {
                 Task { await viewModel.createSession() }
             } label: {
-                Image(systemName: viewModel.isCreatingSession ? "hourglass" : "plus")
-                    .font(.system(size: 15, weight: .semibold))
-                    .frame(width: 34, height: 34)
-                    .contentTransition(.symbolEffect(.replace))
+                ZStack {
+                    Circle().fill(Color.black)
+                    if viewModel.isCreatingSession {
+                        Image(systemName: "hourglass")
+                            .font(.system(size: 15, weight: .semibold))
+                            .foregroundStyle(.white)
+                    } else {
+                        PiLogoShape()
+                            .fill(Color.white, style: FillStyle(eoFill: true))
+                            .frame(width: 18, height: 18)
+                    }
+                }
+                .frame(width: 34, height: 34)
+                .contentTransition(.symbolEffect(.replace))
             }
-            .buttonStyle(.glass)
+            .buttonStyle(.plain)
             .disabled(viewModel.isCreatingSession)
             .help("New Session")
         }
@@ -130,6 +140,44 @@ struct ContentView: View {
             .padding(.bottom, 6)
         }
         .scrollIndicators(.hidden)
+    }
+}
+
+struct PiLogoShape: Shape {
+    func path(in rect: CGRect) -> Path {
+        let scale = min(rect.width, rect.height) / 800.0
+        let xOffset = rect.minX + (rect.width - 800 * scale) / 2
+        let yOffset = rect.minY + (rect.height - 800 * scale) / 2
+
+        func p(_ x: CGFloat, _ y: CGFloat) -> CGPoint {
+            CGPoint(x: x * scale + xOffset, y: y * scale + yOffset)
+        }
+
+        var path = Path()
+
+        path.move(to: p(165.29, 165.29))
+        path.addLine(to: p(517.36, 165.29))
+        path.addLine(to: p(517.36, 400))
+        path.addLine(to: p(400, 400))
+        path.addLine(to: p(400, 517.36))
+        path.addLine(to: p(282.65, 517.36))
+        path.addLine(to: p(282.65, 634.72))
+        path.addLine(to: p(165.29, 634.72))
+        path.closeSubpath()
+
+        path.move(to: p(282.65, 282.65))
+        path.addLine(to: p(282.65, 400))
+        path.addLine(to: p(400, 400))
+        path.addLine(to: p(400, 282.65))
+        path.closeSubpath()
+
+        path.move(to: p(517.36, 400))
+        path.addLine(to: p(634.72, 400))
+        path.addLine(to: p(634.72, 634.72))
+        path.addLine(to: p(517.36, 634.72))
+        path.closeSubpath()
+
+        return path
     }
 }
 

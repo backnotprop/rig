@@ -49,6 +49,7 @@ final class AppleScriptGhosttyController: GhosttyControlling {
 
             set cfg to new surface configuration
             set initial working directory of cfg to \(Self.appleScriptLiteral(workingDirectory))
+            set initial input of cfg to "pi" & linefeed
             set createdWin to new window with configuration cfg
 
             set targetWin to missing value

@@ -14,6 +14,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     )
 
     private var panel: RigPanel?
+    private var autoHide: RigAutoHideController?
 
     nonisolated func applicationDidFinishLaunching(_ notification: Notification) {
         MainActor.assumeIsolated {
@@ -64,8 +65,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             .stationary
         ]
 
-        panel.center()
-        panel.makeKeyAndOrderFront(nil)
+        autoHide = RigAutoHideController(panel: panel)
+        panel.orderFrontRegardless()
 
         DispatchQueue.main.async { [weak self] in
             self?.positionTrafficLights(in: panel)
