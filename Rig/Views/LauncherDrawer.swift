@@ -56,13 +56,12 @@ struct LauncherDrawer: View {
     let onClose: () -> Void
 
     @EnvironmentObject private var store: ConfigStore
-    @State private var prompt: String = ""
+    @StateObject private var composer = PromptComposerController()
     /// Which auxiliary panel is open beneath the action row, if any.
     /// `"library"` for saved prompts, `provider.id` (e.g. `"github"`) for any
     /// reference provider. Only one panel is open at a time so we don't blow
     /// the drawer's vertical budget.
     @State private var openPanelID: String? = nil
-    @FocusState private var isPromptFocused: Bool
 
     private static let libraryPanelID = "library"
 
@@ -84,32 +83,43 @@ struct LauncherDrawer: View {
                 .help("Close")
             }
 
-            TextField("Optional prompt", text: $prompt, axis: .vertical)
-                .textFieldStyle(.plain)
-                .font(.system(size: 12))
-                .lineLimit(1...3)
-                .focused($isPromptFocused)
+            ZStack(alignment: .topLeading) {
+                PromptComposer(
+                    controller: composer,
+                    onSubmit: { onRun(composer.composedString()) }
+                )
                 .padding(.horizontal, 8)
                 .padding(.vertical, 6)
-                .background(
-                    RoundedRectangle(cornerRadius: 6, style: .continuous)
-                        .fill(Color.black.opacity(0.18))
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: 6, style: .continuous)
-                        .stroke(Color.white.opacity(0.06), lineWidth: 0.5)
-                )
+
+                if composer.isEmpty {
+                    Text("Optional prompt")
+                        .font(.system(size: 12))
+                        .foregroundStyle(.tertiary)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 8)
+                        .allowsHitTesting(false)
+                }
+            }
+            .frame(minHeight: 28, maxHeight: 80)
+            .background(
+                RoundedRectangle(cornerRadius: 6, style: .continuous)
+                    .fill(Color.black.opacity(0.18))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 6, style: .continuous)
+                    .stroke(Color.white.opacity(0.06), lineWidth: 0.5)
+            )
 
             HStack(spacing: 6) {
                 DrawerActionButton(
                     tooltip: "Run",
                     systemImage: "play.fill",
-                    action: { onRun(prompt) }
+                    action: { onRun(composer.composedString()) }
                 )
                 DrawerActionButton(
                     tooltip: "Run in background",
                     systemImage: "arrow.up.right.and.arrow.down.left",
-                    action: { onBackground(prompt) }
+                    action: { onBackground(composer.composedString()) }
                 )
                 DrawerActionButton(
                     tooltip: store.config.prompts.isEmpty
@@ -134,9 +144,8 @@ struct LauncherDrawer: View {
 
             if openPanelID == Self.libraryPanelID && !store.config.prompts.isEmpty {
                 PromptDockView(prompts: store.displayPrompts) { selected in
-                    prompt = selected.body
+                    composer.insertText(selected.body)
                     store.recordPromptUse(id: selected.id)
-                    isPromptFocused = true
                 }
                 .transition(
                     .asymmetric(
@@ -152,7 +161,9 @@ struct LauncherDrawer: View {
                 ReferencesPanel(
                     provider: provider,
                     projectPath: store.selectedProject?.path,
-                    onPick: { url in appendToPrompt(url) }
+                    onPick: { item in
+                        composer.insertReference(provider: provider, item: item)
+                    }
                 )
                 .transition(
                     .asymmetric(
@@ -171,25 +182,11 @@ struct LauncherDrawer: View {
             RoundedRectangle(cornerRadius: 10, style: .continuous)
                 .stroke(Color.white.opacity(0.06), lineWidth: 0.5)
         )
-        .onAppear { isPromptFocused = true }
     }
 
     private func togglePanel(_ id: String) {
         withAnimation(.spring(response: 0.32, dampingFraction: 0.82)) {
             openPanelID = (openPanelID == id) ? nil : id
-        }
-    }
-
-    /// Appends a reference URL to the prompt textfield. Inserts a leading
-    /// space if the existing prompt is non-empty and doesn't already end in
-    /// whitespace, so multiple consecutive picks read as a list.
-    private func appendToPrompt(_ url: String) {
-        if prompt.isEmpty {
-            prompt = url
-        } else if let last = prompt.last, last.isWhitespace {
-            prompt += url
-        } else {
-            prompt += " " + url
         }
     }
 }

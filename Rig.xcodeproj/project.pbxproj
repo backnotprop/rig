@@ -37,6 +37,7 @@
 		B00000000000000000000020 /* ShellRunner.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000122 /* ShellRunner.swift */; };
 		B00000000000000000000021 /* GitHubReferenceProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000123 /* GitHubReferenceProvider.swift */; };
 		B00000000000000000000022 /* ReferencesPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000124 /* ReferencesPanel.swift */; };
+		B00000000000000000000023 /* PromptComposer.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000125 /* PromptComposer.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -84,6 +85,7 @@
 		A00000000000000000000122 /* ShellRunner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShellRunner.swift; sourceTree = "<group>"; };
 		A00000000000000000000123 /* GitHubReferenceProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GitHubReferenceProvider.swift; sourceTree = "<group>"; };
 		A00000000000000000000124 /* ReferencesPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReferencesPanel.swift; sourceTree = "<group>"; };
+		A00000000000000000000125 /* PromptComposer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PromptComposer.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -204,6 +206,7 @@
 				A0000000000000000000011F /* PromptsSettingsView.swift */,
 				A00000000000000000000120 /* GeneralSettingsView.swift */,
 				A00000000000000000000124 /* ReferencesPanel.swift */,
+				A00000000000000000000125 /* PromptComposer.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -340,6 +343,7 @@
 				B00000000000000000000020 /* ShellRunner.swift in Sources */,
 				B00000000000000000000021 /* GitHubReferenceProvider.swift in Sources */,
 				B00000000000000000000022 /* ReferencesPanel.swift in Sources */,
+				B00000000000000000000023 /* PromptComposer.swift in Sources */,
 				B00000000000000000000003 /* ContentView.swift in Sources */,
 				B00000000000000000000004 /* SessionRowView.swift in Sources */,
 				B0000000000000000000000E /* LauncherRowView.swift in Sources */,

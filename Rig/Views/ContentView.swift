@@ -50,6 +50,10 @@ struct ContentView: View {
             viewModel.removeSelected()
         }
         .onKeyPress(.return) {
+            // When the drawer is up, Return belongs to the prompt composer
+            // (newline insertion). Only claim it for "focus selected session"
+            // on the bare main surface.
+            if expandedHarnessID != nil { return .ignored }
             Task { await viewModel.focusSelected() }
             return .handled
         }

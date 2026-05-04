@@ -3,15 +3,23 @@ import AppKit
 @MainActor
 final class RigAutoHideController {
     private let panel: NSPanel
-    private let panelWidth: CGFloat
+    private var panelWidth: CGFloat
     private var triggerPanel: NSPanel?
     private var hideWorkItem: DispatchWorkItem?
     private var revealedFrame: NSRect = .zero
     private var hiddenFrame: NSRect = .zero
     private(set) var isRevealed = true
+    /// True between willStartLiveResize and didEndLiveResize. Suppresses every
+    /// hide path so the panel can't slide away under the user's cursor while
+    /// they're actively dragging the edge.
+    private var isResizing = false
 
     private let animationDuration: TimeInterval = 0.40
-    private let hideGracePeriod: TimeInterval = 0.3
+    /// 0.8s (was 0.3s): the old grace was tight enough that moving the cursor
+    /// to the panel's right edge to grab the resize affordance was racing the
+    /// hide timer. 0.8s is forgiving for "I'm reaching for the edge" without
+    /// being so long that the panel feels sluggish on a casual mouseout.
+    private let hideGracePeriod: TimeInterval = 0.8
     private let initialPeekDuration: TimeInterval = 1.5
     private let triggerWidth: CGFloat = 1
     private let revealDelay: TimeInterval = 0.6
@@ -36,6 +44,20 @@ final class RigAutoHideController {
             MainActor.assumeIsolated {
                 self?.handleScreenChange()
             }
+        }
+        NotificationCenter.default.addObserver(
+            forName: NSWindow.willStartLiveResizeNotification,
+            object: panel,
+            queue: .main
+        ) { [weak self] _ in
+            MainActor.assumeIsolated { self?.handleResizeStart() }
+        }
+        NotificationCenter.default.addObserver(
+            forName: NSWindow.didEndLiveResizeNotification,
+            object: panel,
+            queue: .main
+        ) { [weak self] _ in
+            MainActor.assumeIsolated { self?.handleResizeEnd() }
         }
     }
 
@@ -175,6 +197,10 @@ final class RigAutoHideController {
     }
 
     private func scheduleHide(after delay: TimeInterval? = nil) {
+        // Live-resize wins. The user is actively dragging the panel; the
+        // mouse is by definition outside the contentView's tracking area
+        // during a resize, but they obviously don't want it to vanish.
+        if isResizing { return }
         cancelHide()
         let item = DispatchWorkItem { [weak self] in
             self?.hideNow()
@@ -184,6 +210,27 @@ final class RigAutoHideController {
             deadline: .now() + (delay ?? hideGracePeriod),
             execute: item
         )
+    }
+
+    private func handleResizeStart() {
+        isResizing = true
+        cancelHide()
+        cancelScheduledReveal()
+    }
+
+    private func handleResizeEnd() {
+        isResizing = false
+        // Bake the user's chosen width into our cached frames so the next
+        // reveal/hide uses it instead of snapping back to the launch width.
+        panelWidth = panel.frame.width
+        recomputeFrames()
+
+        // If the cursor isn't currently over the panel after the gesture,
+        // restart the hide timer — they presumably moved away to drag and
+        // may continue away.
+        if !panel.frame.contains(NSEvent.mouseLocation) {
+            scheduleHide()
+        }
     }
 
     private func cancelHide() {

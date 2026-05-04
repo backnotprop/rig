@@ -11,7 +11,9 @@ import SwiftUI
 struct ReferencesPanel: View {
     let provider: any ReferenceProvider
     let projectPath: String?
-    let onPick: (String) -> Void
+    /// The full item is handed up so the drawer can build a typed inline chip
+    /// (with provider id, kind, etc.), not just a URL string.
+    let onPick: (ReferenceItem) -> Void
 
     @EnvironmentObject private var store: ConfigStore
 
@@ -32,7 +34,7 @@ struct ReferencesPanel: View {
     init(
         provider: any ReferenceProvider,
         projectPath: String?,
-        onPick: @escaping (String) -> Void
+        onPick: @escaping (ReferenceItem) -> Void
     ) {
         self.provider = provider
         self.projectPath = projectPath
@@ -300,7 +302,7 @@ struct ReferencesPanel: View {
             LazyVStack(spacing: 0) {
                 ForEach(items) { item in
                     Button {
-                        onPick(item.url.absoluteString)
+                        onPick(item)
                     } label: {
                         row(item)
                     }
