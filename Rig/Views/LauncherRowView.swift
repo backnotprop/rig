@@ -5,6 +5,7 @@ struct LauncherRowView: View {
     let harnesses: [Harness]
     let isDisabled: Bool
     let onTap: (Harness) -> Void
+    let onSecondaryTap: (Harness) -> Void
 
     @State private var hoverX: CGFloat?
 
@@ -30,6 +31,7 @@ struct LauncherRowView: View {
                     .buttonStyle(.plain)
                     .disabled(isDisabled)
                     .help(harness.label)
+                    .onSecondaryClick { onSecondaryTap(harness) }
                     .position(x: layout.centers[index], y: geo.size.height / 2)
                 }
             }
@@ -172,7 +174,8 @@ struct LauncherIconView: View {
     LauncherRowView(
         harnesses: Harness.builtinDefaults,
         isDisabled: false,
-        onTap: { _ in }
+        onTap: { _ in },
+        onSecondaryTap: { _ in }
     )
     .padding()
     .frame(width: 240)

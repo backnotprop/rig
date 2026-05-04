@@ -6,10 +6,20 @@ import Foundation
 struct HarnessFlagSchema: Equatable {
     var toggles: [HarnessToggleSpec] = []
     var pickers: [HarnessPickerSpec] = []
+    var promptStyle: PromptStyle = .positional
 
     static let empty = HarnessFlagSchema()
 
     var isEmpty: Bool { toggles.isEmpty && pickers.isEmpty }
+}
+
+/// How the harness's CLI accepts an initial prompt. Always appended to the end of
+/// the composed command, after toggles and pickers.
+enum PromptStyle: Equatable {
+    /// `<command> 'prompt'` — pi, codex, claude.
+    case positional
+    /// `<command> --<name> 'prompt'` — opencode uses `--prompt`.
+    case flag(String)
 }
 
 struct HarnessToggleSpec: Identifiable, Equatable {
@@ -49,7 +59,8 @@ enum HarnessSchemas {
             return HarnessFlagSchema(
                 toggles: [
                     HarnessToggleSpec(key: "yolo", label: "YOLO mode", cliFlag: "--yolo")
-                ]
+                ],
+                promptStyle: .flag("prompt")
             )
         case "claude-code":
             return HarnessFlagSchema(
@@ -83,10 +94,12 @@ enum HarnessSchemas {
     }
 
     /// Composes the actual command-line that gets piped into the new Ghostty session.
-    /// Format: `<harness.command> <toggle-cli-flag>... <picker-cli-flag>=<value>...`.
+    /// Format: `<harness.command> <toggle-cli-flag>... <picker-cli-flag> <value>... [prompt]`.
     /// Picker values matching the schema's `defaultValue` are omitted (no point in
-    /// emitting `--permission-mode=default` when that's the CLI's default behavior).
-    static func composedCommand(for harness: Harness) -> String {
+    /// emitting `--permission-mode default` when that's the CLI's default behavior).
+    /// When `prompt` is non-empty, it's single-quote shell-escaped and appended at
+    /// the end — positional for most harnesses, `--prompt '<value>'` for opencode.
+    static func composedCommand(for harness: Harness, prompt: String = "") -> String {
         let schema = schema(for: harness.id)
         var parts: [String] = []
         let trimmed = harness.command.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -112,6 +125,25 @@ enum HarnessSchemas {
             }
         }
 
+        let trimmedPrompt = prompt.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !trimmedPrompt.isEmpty {
+            let quoted = shellSingleQuote(trimmedPrompt)
+            switch schema.promptStyle {
+            case .positional:
+                parts.append(quoted)
+            case .flag(let name):
+                parts.append("--\(name)")
+                parts.append(quoted)
+            }
+        }
+
         return parts.joined(separator: " ")
+    }
+
+    /// Wraps `value` in single quotes for safe shell pasting. Single-quoting disables
+    /// every form of expansion — variables, backticks, escapes — so the only character
+    /// we need to handle is `'` itself, which we close-quote, escape, and re-open.
+    private static func shellSingleQuote(_ value: String) -> String {
+        "'" + value.replacingOccurrences(of: "'", with: "'\\''") + "'"
     }
 }

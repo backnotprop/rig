@@ -172,7 +172,8 @@ final class RigTests: XCTestCase {
         let controller = await AppleScriptGhosttyController()
         let created = try await controller.createWindow(
             workingDirectory: FileManager.default.homeDirectoryForCurrentUser.path,
-            initialInput: nil
+            initialInput: nil,
+            bringToFront: true
         )
 
         _ = try await controller.focusTerminal(
@@ -208,15 +209,19 @@ private actor FakeGhosttyController: GhosttyControlling {
         lastInitialInput
     }
 
+    private(set) var lastBringToFront: Bool?
+
     func createWindow(
         workingDirectory: String,
-        initialInput: String?
+        initialInput: String?,
+        bringToFront: Bool
     ) async throws -> CreatedGhosttySurface {
         try Task.checkCancellation()
 
         counter += 1
         createdWorkingDirectories.append(workingDirectory)
         lastInitialInput = initialInput
+        lastBringToFront = bringToFront
 
         return CreatedGhosttySurface(
             windowId: "window-\(counter)",

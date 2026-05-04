@@ -37,7 +37,8 @@ final class AppleScriptGhosttyController: GhosttyControlling {
 
     func createWindow(
         workingDirectory: String,
-        initialInput: String?
+        initialInput: String?,
+        bringToFront: Bool
     ) async throws -> CreatedGhosttySurface {
         try Task.checkCancellation()
 
@@ -51,6 +52,12 @@ final class AppleScriptGhosttyController: GhosttyControlling {
         } else {
             initialInputClause = ""
         }
+
+        // Background launches skip `select tab` + `focus terminal`, which is what
+        // brings the new window forward and pulls macOS focus to Ghostty.
+        let activationClause = bringToFront
+            ? "select tab targetTab\nfocus targetTerm"
+            : ""
 
         let json = try run(script: """
         \(Self.jsonHandlers)
@@ -112,9 +119,10 @@ final class AppleScriptGhosttyController: GhosttyControlling {
             -- `focus` to bring its window forward. If we activate Ghostty before
             -- creating the new window, macOS targets Ghostty's existing frontmost
             -- window's Space (e.g. a full-screen host) and yanks the user there
-            -- before our new window even exists.
-            select tab targetTab
-            focus targetTerm
+            -- before our new window even exists. For background launches, the
+            -- entire activationClause is empty so the window is created without
+            -- being focused.
+            \(activationClause)
 
             set output to "{"
             set output to output & "\\"windowId\\":" & my jsonString(id of targetWin)

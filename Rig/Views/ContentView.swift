@@ -31,6 +31,7 @@ struct ContentView: View {
     @EnvironmentObject private var store: ConfigStore
     @EnvironmentObject private var appDelegate: AppDelegate
     @FocusState private var isListFocused: Bool
+    @State private var expandedHarnessID: String?
 
     var body: some View {
         ZStack(alignment: .topTrailing) {
@@ -52,6 +53,13 @@ struct ContentView: View {
             Task { await viewModel.focusSelected() }
             return .handled
         }
+        .onKeyPress(.escape) {
+            if expandedHarnessID != nil {
+                closeDrawer()
+                return .handled
+            }
+            return .ignored
+        }
         .alert(
             "Rig hit a snag",
             isPresented: Binding(
@@ -62,6 +70,28 @@ struct ContentView: View {
             Button("OK") { viewModel.dismissError() }
         } message: {
             Text(viewModel.lastError ?? "")
+        }
+    }
+
+    private func launch(_ harness: Harness, bringToFront: Bool, prompt: String = "") {
+        let cwd = store.selectedProject?.path
+        let projectID = store.selectedProject?.id
+        let composed = HarnessSchemas.composedCommand(for: harness, prompt: prompt)
+        Task {
+            await viewModel.createSession(
+                workingDirectory: cwd,
+                command: composed,
+                harnessID: harness.id,
+                projectID: projectID,
+                labelPrefix: harness.label,
+                bringToFront: bringToFront
+            )
+        }
+    }
+
+    private func closeDrawer() {
+        withAnimation(.spring(response: 0.32, dampingFraction: 0.82)) {
+            expandedHarnessID = nil
         }
     }
 
@@ -89,17 +119,12 @@ struct ContentView: View {
                     harnesses: store.enabledHarnesses,
                     isDisabled: viewModel.isCreatingSession,
                     onTap: { harness in
-                        let cwd = store.selectedProject?.path
-                        let projectID = store.selectedProject?.id
-                        let composed = HarnessSchemas.composedCommand(for: harness)
-                        Task {
-                            await viewModel.createSession(
-                                workingDirectory: cwd,
-                                command: composed,
-                                harnessID: harness.id,
-                                projectID: projectID,
-                                labelPrefix: harness.label
-                            )
+                        launch(harness, bringToFront: true)
+                    },
+                    onSecondaryTap: { harness in
+                        withAnimation(.spring(response: 0.32, dampingFraction: 0.82)) {
+                            expandedHarnessID =
+                                (expandedHarnessID == harness.id) ? nil : harness.id
                         }
                     }
                 )
@@ -108,6 +133,30 @@ struct ContentView: View {
                     .padding(.leading, 4)
             }
             .padding(.top, 28)
+
+            if let id = expandedHarnessID,
+                let harness = store.config.harnesses.first(where: { $0.id == id })
+            {
+                LauncherDrawer(
+                    harness: harness,
+                    onRun: { prompt in
+                        launch(harness, bringToFront: true, prompt: prompt)
+                        closeDrawer()
+                    },
+                    onBackground: { prompt in
+                        launch(harness, bringToFront: false, prompt: prompt)
+                        closeDrawer()
+                    },
+                    onClose: closeDrawer
+                )
+                .padding(.horizontal, 4)
+                .transition(
+                    .asymmetric(
+                        insertion: .move(edge: .top).combined(with: .opacity),
+                        removal: .opacity
+                    )
+                )
+            }
 
             if viewModel.sessions.isEmpty {
                 emptyState
@@ -238,7 +287,8 @@ private struct SessionGroup: Identifiable {
 private struct PreviewGhosttyController: GhosttyControlling {
     func createWindow(
         workingDirectory: String,
-        initialInput: String?
+        initialInput: String?,
+        bringToFront: Bool
     ) async throws -> CreatedGhosttySurface {
         CreatedGhosttySurface(
             windowId: "preview-window",

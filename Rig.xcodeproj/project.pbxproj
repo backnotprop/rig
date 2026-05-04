@@ -29,6 +29,7 @@
 		B00000000000000000000015 /* AgentsSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000117 /* AgentsSettingsView.swift */; };
 		B00000000000000000000019 /* ProjectsSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000011B /* ProjectsSettingsView.swift */; };
 		B0000000000000000000001A /* HarnessFlagSchema.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000011C /* HarnessFlagSchema.swift */; };
+		B0000000000000000000001B /* LauncherDrawer.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000011D /* LauncherDrawer.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -68,6 +69,7 @@
 		A0000000000000000000011A /* ConfigStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConfigStore.swift; sourceTree = "<group>"; };
 		A0000000000000000000011B /* ProjectsSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProjectsSettingsView.swift; sourceTree = "<group>"; };
 		A0000000000000000000011C /* HarnessFlagSchema.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HarnessFlagSchema.swift; sourceTree = "<group>"; };
+		A0000000000000000000011D /* LauncherDrawer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LauncherDrawer.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -172,6 +174,7 @@
 				A00000000000000000000116 /* SettingsView.swift */,
 				A00000000000000000000117 /* AgentsSettingsView.swift */,
 				A0000000000000000000011B /* ProjectsSettingsView.swift */,
+				A0000000000000000000011D /* LauncherDrawer.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -300,6 +303,7 @@
 				B00000000000000000000015 /* AgentsSettingsView.swift in Sources */,
 				B00000000000000000000019 /* ProjectsSettingsView.swift in Sources */,
 				B0000000000000000000001A /* HarnessFlagSchema.swift in Sources */,
+				B0000000000000000000001B /* LauncherDrawer.swift in Sources */,
 				B00000000000000000000003 /* ContentView.swift in Sources */,
 				B00000000000000000000004 /* SessionRowView.swift in Sources */,
 				B0000000000000000000000E /* LauncherRowView.swift in Sources */,

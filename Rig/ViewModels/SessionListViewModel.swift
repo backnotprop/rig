@@ -37,7 +37,8 @@ final class SessionListViewModel: ObservableObject {
         command: String? = nil,
         harnessID: String? = nil,
         projectID: UUID? = nil,
-        labelPrefix: String = "Session"
+        labelPrefix: String = "Session",
+        bringToFront: Bool = true
     ) async {
         guard !isCreatingSession else { return }
         isCreatingSession = true
@@ -51,7 +52,8 @@ final class SessionListViewModel: ObservableObject {
             let cwd = workingDirectory ?? homeDirectory
             let createdSurface = try await controller.createWindow(
                 workingDirectory: cwd,
-                initialInput: command
+                initialInput: command,
+                bringToFront: bringToFront
             )
             nextSessionOrdinal = ordinal + 1
 

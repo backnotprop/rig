@@ -112,35 +112,24 @@ private struct HarnessRow: View {
                 }
             }
 
-            if let preview = composedCommandPreview {
-                HStack(alignment: .firstTextBaseline, spacing: 6) {
-                    Image(systemName: "arrow.right")
-                        .font(.system(size: 9, weight: .semibold))
-                        .foregroundStyle(.tertiary)
-                    Text(preview)
-                        .font(.system(.caption, design: .monospaced))
-                        .foregroundStyle(.tertiary)
-                        .lineLimit(2)
-                        .truncationMode(.middle)
-                }
-                .padding(.top, 2)
+            HStack(alignment: .firstTextBaseline, spacing: 6) {
+                Image(systemName: "arrow.right")
+                    .font(.system(size: 9, weight: .semibold))
+                    .foregroundStyle(.tertiary)
+                Text(HarnessSchemas.composedCommand(for: harness))
+                    .font(.system(.caption, design: .monospaced))
+                    .foregroundStyle(.tertiary)
+                    .lineLimit(2)
+                    .truncationMode(.middle)
+                    .textSelection(.enabled)
             }
+            .padding(.top, 2)
         }
         .padding(10)
         .background(
             RoundedRectangle(cornerRadius: 6, style: .continuous)
                 .fill(Color.primary.opacity(0.04))
         )
-    }
-
-    /// The full command Rig will run, shown faded under the flags so the user can see
-    /// the effect of their toggles without us having to reach into the editable
-    /// command field. Returns `nil` when no flag is changing the user's input — keeps
-    /// the row uncluttered for harnesses with no active flags.
-    private var composedCommandPreview: String? {
-        let composed = HarnessSchemas.composedCommand(for: harness)
-        let user = harness.command.trimmingCharacters(in: .whitespacesAndNewlines)
-        return composed == user ? nil : composed
     }
 
     // Drop the key entirely when the value is the "off" / default state — keeps
