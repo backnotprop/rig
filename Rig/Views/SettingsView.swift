@@ -6,8 +6,10 @@ struct SettingsView: View {
     var body: some View {
         NavigationSplitView {
             List(selection: $selection) {
-                Label("Agents", systemImage: "person.2.gearshape")
+                Label("Agents", systemImage: "sparkles.rectangle.stack")
                     .tag(SettingsTab.agents)
+                Label("Projects", systemImage: "folder")
+                    .tag(SettingsTab.projects)
             }
             .navigationSplitViewColumnWidth(min: 180, ideal: 200, max: 240)
         } detail: {
@@ -15,6 +17,9 @@ struct SettingsView: View {
             case .agents:
                 AgentsSettingsView()
                     .navigationTitle("Agents")
+            case .projects:
+                ProjectsSettingsView()
+                    .navigationTitle("Projects")
             }
         }
         .frame(minWidth: 640, minHeight: 460)
@@ -23,4 +28,5 @@ struct SettingsView: View {
 
 private enum SettingsTab: Hashable {
     case agents
+    case projects
 }

@@ -168,6 +168,18 @@ extension ConfigStore {
         addProject(path: url.path)
     }
 
+    func clearProjectSelection() {
+        config.preferences.selectedProjectID = nil
+    }
+
+    func removeProject(id: UUID) {
+        config.projects.removeAll { $0.id == id }
+        config.preferences.recentProjectIDs.removeAll { $0 == id }
+        if config.preferences.selectedProjectID == id {
+            config.preferences.selectedProjectID = nil
+        }
+    }
+
     private func moveProjectToFrontOfRecents(_ id: UUID) {
         var recents = config.preferences.recentProjectIDs
         recents.removeAll { $0 == id }

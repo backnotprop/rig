@@ -29,9 +29,60 @@ private struct VisualEffectBackground: NSViewRepresentable {
 struct ContentView: View {
     @EnvironmentObject private var viewModel: SessionListViewModel
     @EnvironmentObject private var store: ConfigStore
+    @EnvironmentObject private var appDelegate: AppDelegate
     @FocusState private var isListFocused: Bool
 
     var body: some View {
+        ZStack(alignment: .topTrailing) {
+            mainContent
+            settingsButton
+        }
+        .ignoresSafeArea()
+        .focusable()
+        .focusEffectDisabled()
+        .focused($isListFocused)
+        .onAppear { isListFocused = true }
+        .onMoveCommand { direction in
+            viewModel.moveSelection(direction)
+        }
+        .onDeleteCommand {
+            viewModel.removeSelected()
+        }
+        .onKeyPress(.return) {
+            Task { await viewModel.focusSelected() }
+            return .handled
+        }
+        .alert(
+            "Rig hit a snag",
+            isPresented: Binding(
+                get: { viewModel.lastError != nil },
+                set: { if !$0 { viewModel.dismissError() } }
+            )
+        ) {
+            Button("OK") { viewModel.dismissError() }
+        } message: {
+            Text(viewModel.lastError ?? "")
+        }
+    }
+
+    private var settingsButton: some View {
+        Button {
+            appDelegate.presentSettingsWindow()
+        } label: {
+            Image(systemName: "gearshape")
+                .font(.system(size: 12, weight: .medium))
+                .foregroundStyle(.secondary)
+                .opacity(0.55)
+                .frame(width: 22, height: 22)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .help("Settings")
+        .padding(.top, 12)
+        .padding(.trailing, 14)
+    }
+
+    private var mainContent: some View {
         VStack(spacing: 8) {
             ZStack(alignment: .leading) {
                 LauncherRowView(
@@ -79,34 +130,6 @@ struct ContentView: View {
             )
             .overlay(Color.white.opacity(0.04))
         )
-        .ignoresSafeArea()
-        .focusable()
-        .focusEffectDisabled()
-        .focused($isListFocused)
-        .onAppear {
-            isListFocused = true
-        }
-        .onMoveCommand { direction in
-            viewModel.moveSelection(direction)
-        }
-        .onDeleteCommand {
-            viewModel.removeSelected()
-        }
-        .onKeyPress(.return) {
-            Task { await viewModel.focusSelected() }
-            return .handled
-        }
-        .alert(
-            "Rig hit a snag",
-            isPresented: Binding(
-                get: { viewModel.lastError != nil },
-                set: { if !$0 { viewModel.dismissError() } }
-            )
-        ) {
-            Button("OK") { viewModel.dismissError() }
-        } message: {
-            Text(viewModel.lastError ?? "")
-        }
     }
 
     private var emptyState: some View {
@@ -125,27 +148,24 @@ struct ContentView: View {
 
     private var sessionList: some View {
         ScrollView {
-            LazyVStack(spacing: 4) {
-                ForEach(viewModel.sessions) { session in
-                    Button {
-                        viewModel.requestFocus(session)
-                    } label: {
-                        SessionRowView(
-                            session: session,
-                            isSelected: viewModel.selectedSessionID == session.id
-                        )
+            LazyVStack(alignment: .leading, spacing: 4) {
+                if let projectID = store.config.preferences.selectedProjectID {
+                    let filtered = viewModel.sessions.filter { $0.projectID == projectID }
+                    ForEach(filtered) { session in
+                        sessionRow(session)
                     }
-                    .buttonStyle(.plain)
-                    .contextMenu {
-                        Button("Remove") {
-                            viewModel.remove(session)
+                } else {
+                    ForEach(groupedSessions) { group in
+                        Text(group.title)
+                            .font(.caption)
+                            .fontWeight(.semibold)
+                            .foregroundStyle(.secondary)
+                            .padding(.leading, 14)
+                            .padding(.top, 6)
+                        ForEach(group.sessions) { session in
+                            sessionRow(session)
                         }
                     }
-                    .transition(
-                        .asymmetric(
-                            insertion: .move(edge: .top).combined(with: .opacity),
-                            removal: .opacity
-                        ))
                 }
             }
             .padding(.horizontal, 2)
@@ -153,12 +173,65 @@ struct ContentView: View {
         }
         .scrollIndicators(.hidden)
     }
+
+    private func sessionRow(_ session: GhosttySession) -> some View {
+        Button {
+            viewModel.requestFocus(session)
+        } label: {
+            SessionRowView(
+                session: session,
+                isSelected: viewModel.selectedSessionID == session.id
+            )
+        }
+        .buttonStyle(.plain)
+        .contextMenu {
+            Button("Remove") {
+                viewModel.remove(session)
+            }
+        }
+        .transition(
+            .asymmetric(
+                insertion: .move(edge: .top).combined(with: .opacity),
+                removal: .opacity
+            )
+        )
+    }
+
+    private var groupedSessions: [SessionGroup] {
+        var groups: [SessionGroup] = []
+        for project in store.config.projects {
+            let sessions = viewModel.sessions.filter { $0.projectID == project.id }
+            if !sessions.isEmpty {
+                groups.append(
+                    SessionGroup(
+                        id: project.id.uuidString,
+                        title: project.displayName,
+                        sessions: sessions
+                    )
+                )
+            }
+        }
+        let orphans = viewModel.sessions.filter { $0.projectID == nil }
+        if !orphans.isEmpty {
+            groups.append(
+                SessionGroup(id: "no-project", title: "No project", sessions: orphans)
+            )
+        }
+        return groups
+    }
+}
+
+private struct SessionGroup: Identifiable {
+    let id: String
+    let title: String
+    let sessions: [GhosttySession]
 }
 
 #Preview {
     ContentView()
         .environmentObject(SessionListViewModel(controller: PreviewGhosttyController()))
         .environmentObject(ConfigStore(storeURL: URL(fileURLWithPath: "/tmp/rig-preview-config.json")))
+        .environmentObject(AppDelegate())
 }
 
 private struct PreviewGhosttyController: GhosttyControlling {

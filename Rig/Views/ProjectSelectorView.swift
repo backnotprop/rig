@@ -17,7 +17,7 @@ struct ProjectSelectorView: View {
 
     private var triggerLabel: some View {
         HStack(spacing: 4) {
-            Text(store.selectedProject?.displayName ?? "Project")
+            Text(store.selectedProject?.displayName ?? "All projects")
                 .font(.system(size: 12, weight: .medium))
                 .lineLimit(1)
                 .truncationMode(.middle)
@@ -28,7 +28,7 @@ struct ProjectSelectorView: View {
         .foregroundStyle(.primary)
         .padding(.horizontal, 10)
         .padding(.vertical, 5)
-        .frame(maxWidth: 110)
+        .frame(maxWidth: 130)
         .background {
             Capsule(style: .continuous)
                 .fill(.thinMaterial)
@@ -44,11 +44,20 @@ struct ProjectSelectorView: View {
         let recent = store.recentProjects
         let recentIDs = store.recentProjectIDs
         let overflow = store.allProjectsByRecency.filter { !recentIDs.contains($0.id) }
+        let isAllSelected = store.config.preferences.selectedProjectID == nil
 
-        if recent.isEmpty {
-            Text("No projects yet")
-                .foregroundStyle(.secondary)
-        } else {
+        Button {
+            store.clearProjectSelection()
+        } label: {
+            if isAllSelected {
+                Label("All projects", systemImage: "checkmark")
+            } else {
+                Text("All projects")
+            }
+        }
+
+        if !recent.isEmpty {
+            Divider()
             ForEach(recent) { project in
                 Button {
                     store.selectProject(id: project.id)
@@ -80,7 +89,7 @@ struct ProjectSelectorView: View {
         Button {
             store.addProjectByPickingFolder()
         } label: {
-            Label("Add new…", systemImage: "plus")
+            Label("Add project…", systemImage: "plus")
         }
     }
 }

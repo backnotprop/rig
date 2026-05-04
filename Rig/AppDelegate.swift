@@ -23,7 +23,7 @@ final class RigPanel: NSPanel {
 }
 
 @MainActor
-final class AppDelegate: NSObject, NSApplicationDelegate {
+final class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
     let configStore = ConfigStore()
     let viewModel = SessionListViewModel(
         controller: AppleScriptGhosttyController()
@@ -51,6 +51,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func setupPanel() {
+        // Why .nonactivatingPanel: it's required for isFloatingPanel = true to actually
+        // float over other apps' full-screen Spaces. Without it, the panel falls back
+        // to normal-window behavior and stops appearing over full-screen content.
+        // Trade-off: clicks on the panel don't activate the app, so Cmd+, / menu-bar
+        // access don't work without dock-clicking. We mitigate that by exposing
+        // Settings via a gear button inside the panel UI itself.
         let panel = RigPanel(
             contentRect: NSRect(x: 0, y: 0, width: 240, height: 360),
             styleMask: [
@@ -68,6 +74,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             rootView: ContentView()
                 .environmentObject(viewModel)
                 .environmentObject(configStore)
+                .environmentObject(self)
         )
 
         panel.title = "Rig"

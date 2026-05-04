@@ -27,6 +27,7 @@
 		B00000000000000000000012 /* ProjectSelectorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000114 /* ProjectSelectorView.swift */; };
 		B00000000000000000000014 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000116 /* SettingsView.swift */; };
 		B00000000000000000000015 /* AgentsSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000117 /* AgentsSettingsView.swift */; };
+		B00000000000000000000019 /* ProjectsSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000011B /* ProjectsSettingsView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -64,6 +65,7 @@
 		A00000000000000000000118 /* Harness.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Harness.swift; sourceTree = "<group>"; };
 		A00000000000000000000119 /* RigConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RigConfig.swift; sourceTree = "<group>"; };
 		A0000000000000000000011A /* ConfigStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConfigStore.swift; sourceTree = "<group>"; };
+		A0000000000000000000011B /* ProjectsSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProjectsSettingsView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -166,6 +168,7 @@
 				A00000000000000000000114 /* ProjectSelectorView.swift */,
 				A00000000000000000000116 /* SettingsView.swift */,
 				A00000000000000000000117 /* AgentsSettingsView.swift */,
+				A0000000000000000000011B /* ProjectsSettingsView.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -292,6 +295,7 @@
 				B00000000000000000000012 /* ProjectSelectorView.swift in Sources */,
 				B00000000000000000000014 /* SettingsView.swift in Sources */,
 				B00000000000000000000015 /* AgentsSettingsView.swift in Sources */,
+				B00000000000000000000019 /* ProjectsSettingsView.swift in Sources */,
 				B00000000000000000000003 /* ContentView.swift in Sources */,
 				B00000000000000000000004 /* SessionRowView.swift in Sources */,
 				B0000000000000000000000E /* LauncherRowView.swift in Sources */,
