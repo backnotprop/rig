@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct ProjectSelectorView: View {
-    @EnvironmentObject private var projects: ProjectsViewModel
+    @EnvironmentObject private var store: ConfigStore
 
     var body: some View {
         Menu {
@@ -17,7 +17,7 @@ struct ProjectSelectorView: View {
 
     private var triggerLabel: some View {
         HStack(spacing: 4) {
-            Text(projects.selectedProject?.name ?? "Project")
+            Text(store.selectedProject?.displayName ?? "Project")
                 .font(.system(size: 12, weight: .medium))
                 .lineLimit(1)
                 .truncationMode(.middle)
@@ -41,9 +41,9 @@ struct ProjectSelectorView: View {
 
     @ViewBuilder
     private var menuContent: some View {
-        let recent = projects.recentProjects
-        let recentIDs = projects.recentProjectIDs
-        let overflow = projects.allProjectsByRecency.filter { !recentIDs.contains($0.id) }
+        let recent = store.recentProjects
+        let recentIDs = store.recentProjectIDs
+        let overflow = store.allProjectsByRecency.filter { !recentIDs.contains($0.id) }
 
         if recent.isEmpty {
             Text("No projects yet")
@@ -51,12 +51,12 @@ struct ProjectSelectorView: View {
         } else {
             ForEach(recent) { project in
                 Button {
-                    projects.selectProject(id: project.id)
+                    store.selectProject(id: project.id)
                 } label: {
-                    if projects.selectedProjectID == project.id {
-                        Label(project.name, systemImage: "checkmark")
+                    if store.config.preferences.selectedProjectID == project.id {
+                        Label(project.displayName, systemImage: "checkmark")
                     } else {
-                        Text(project.name)
+                        Text(project.displayName)
                     }
                 }
             }
@@ -67,9 +67,9 @@ struct ProjectSelectorView: View {
             Menu("Show all") {
                 ForEach(overflow) { project in
                     Button {
-                        projects.selectProject(id: project.id)
+                        store.selectProject(id: project.id)
                     } label: {
-                        Text(project.name)
+                        Text(project.displayName)
                     }
                 }
             }
@@ -78,7 +78,7 @@ struct ProjectSelectorView: View {
         Divider()
 
         Button {
-            projects.addProjectByPickingFolder()
+            store.addProjectByPickingFolder()
         } label: {
             Label("Add new…", systemImage: "plus")
         }

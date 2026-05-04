@@ -38,8 +38,7 @@ When iterating, kill any prior instance and clear persisted state between runs:
 
 ```sh
 pkill -x Rig
-rm -f "$HOME/Library/Application Support/Rig/sessions.json" \
-      "$HOME/Library/Application Support/Rig/projects.json"
+rm -f "$HOME/Library/Application Support/Rig/config.json"
 ```
 
 ## Big-picture architecture
@@ -49,7 +48,8 @@ The app is intentionally split between AppKit (window ownership, AppleScript) an
 - **`AppDelegate`** owns the floating `RigPanel` (an `NSPanel` subclass) directly. SwiftUI's `App` declares only `Settings { EmptyView() }` to satisfy `@main`. **The panel is not a SwiftUI `WindowGroup`** — the WindowGroup-spawned NSWindow can't reliably float across other apps' full-screen Spaces, no matter how its level/collectionBehavior are set. Owning the panel from AppKit is the supported path.
 - **`RigAutoHideController`** drives the slide-in/slide-out animation, owns a 1px-wide trigger `NSPanel` anchored at the screen's left edge, and tracks reveal/hide intent. The animation goes through `panel.setFrame(_:display:animate:)` plus three `RigPanel` overrides (`canBecomeKey`, `animationResizeTime`, `constrainFrameRect`). Don't refactor those overrides without reading the notes — each prevents a specific regression.
 - **`AppleScriptGhosttyController`** is the only Ghostty bridge. It is `@MainActor` (NSAppleScript needs the main thread / a CFRunLoop) and exposes just two operations: `createWindow(workingDirectory:)` and `focusTerminal(windowId:tabId:terminalId:)`. No state polling; no `closeTerminal`. The MVP is deliberately lean.
-- **`SessionListViewModel`** and **`ProjectsViewModel`** are `@MainActor` ObservableObjects, persisted to JSON files in `~/Library/Application Support/Rig/`. The session view model coalesces focus requests (latest-wins, cooperative cancellation) so rapid clicks don't queue up.
+- **`ConfigStore`** is the single source of truth for user-configurable state — harnesses, projects, preferences. Persisted as one debounced-save JSON file (`config.json`); views observe via `@EnvironmentObject`. Mutate `store.config.harnesses[i].command = "…"` and the change auto-saves.
+- **`SessionListViewModel`** is in-memory only — sessions are runtime references to Ghostty surfaces and not persisted (the IDs go stale the moment Ghostty quits). Coalesces focus requests (latest-wins, cooperative cancellation) so rapid clicks don't queue up.
 - **`LauncherRowView`** does the dock-style magnification by computing per-icon sizes via Gaussian falloff over slot-distance from a fractional focus index, then shifting the row so the focus icon's center sits under the cursor (with a per-focus right-edge cap to keep the rightmost icon on-screen).
 - **Liquid Glass background** is an `NSVisualEffectView(material: .hudWindow, blendingMode: .behindWindow)` wrapped in `VisualEffectBackground` — *not* SwiftUI's `.glassEffect`, which has a stale-blur bug on macOS 26.
 

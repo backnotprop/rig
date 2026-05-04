@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct AgentsSettingsView: View {
-    @EnvironmentObject private var settings: HarnessSettingsViewModel
+    @EnvironmentObject private var store: ConfigStore
 
     var body: some View {
         ScrollView {
@@ -13,11 +13,12 @@ struct AgentsSettingsView: View {
                     .padding(.leading, 6)
 
                 VStack(spacing: 0) {
-                    ForEach(Array($settings.harnesses.enumerated()), id: \.element.id) { index, $harness in
+                    ForEach(Array($store.config.harnesses.enumerated()), id: \.element.id) {
+                        index, $harness in
                         HarnessRow(harness: $harness)
                             .padding(.horizontal, 16)
                             .padding(.vertical, 14)
-                        if index < settings.harnesses.count - 1 {
+                        if index < store.config.harnesses.count - 1 {
                             Divider()
                                 .padding(.leading, 70)
                         }
@@ -32,11 +33,13 @@ struct AgentsSettingsView: View {
                         .stroke(Color.primary.opacity(0.06), lineWidth: 0.5)
                 )
 
-                Text("Each agent runs its startup command in a new Ghostty session. Disabled agents are hidden from the launcher row.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .padding(.leading, 6)
-                    .padding(.top, 2)
+                Text(
+                    "Each agent runs its startup command in a new Ghostty session. Disabled agents are hidden from the launcher row."
+                )
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .padding(.leading, 6)
+                .padding(.top, 2)
             }
             .padding(20)
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -46,7 +49,7 @@ struct AgentsSettingsView: View {
 }
 
 private struct HarnessRow: View {
-    @Binding var harness: LauncherHarness
+    @Binding var harness: Harness
 
     var body: some View {
         HStack(alignment: .center, spacing: 14) {

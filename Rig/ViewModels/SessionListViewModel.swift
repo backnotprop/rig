@@ -9,21 +9,17 @@ final class SessionListViewModel: ObservableObject {
     @Published private(set) var lastError: String?
 
     private let controller: GhosttyControlling
-    private let store: SessionStore
     private let homeDirectory: String
     private var nextSessionOrdinal = 1
     private var hasStarted = false
-    private var persistedSnapshot: PersistedSessions?
     private var focusTask: Task<Void, Never>?
     private var pendingFocusSessionID: GhosttySession.ID?
 
     init(
         controller: GhosttyControlling,
-        store: SessionStore,
         homeDirectory: String = FileManager.default.homeDirectoryForCurrentUser.path
     ) {
         self.controller = controller
-        self.store = store
         self.homeDirectory = homeDirectory
     }
 
@@ -34,18 +30,15 @@ final class SessionListViewModel: ObservableObject {
     func start() async {
         guard !hasStarted else { return }
         hasStarted = true
-
-        do {
-            let persisted = try store.load()
-            sessions = persisted.sessions
-            nextSessionOrdinal = max(persisted.nextSessionOrdinal, nextOrdinal(after: sessions))
-            persistedSnapshot = persisted
-        } catch {
-            lastError = error.localizedDescription
-        }
     }
 
-    func createSession(workingDirectory: String? = nil) async {
+    func createSession(
+        workingDirectory: String? = nil,
+        command: String? = nil,
+        harnessID: String? = nil,
+        projectID: UUID? = nil,
+        labelPrefix: String = "Session"
+    ) async {
         guard !isCreatingSession else { return }
         isCreatingSession = true
         focusTask?.cancel()
@@ -54,14 +47,19 @@ final class SessionListViewModel: ObservableObject {
 
         do {
             let ordinal = nextSessionOrdinal
-            let label = "Session \(ordinal)"
+            let label = "\(labelPrefix) \(ordinal)"
             let cwd = workingDirectory ?? homeDirectory
-            let createdSurface = try await controller.createWindow(workingDirectory: cwd)
+            let createdSurface = try await controller.createWindow(
+                workingDirectory: cwd,
+                initialInput: command
+            )
             nextSessionOrdinal = ordinal + 1
 
             let session = GhosttySession(
                 id: UUID(),
                 label: label,
+                harnessID: harnessID,
+                projectID: projectID,
                 ghosttyWindowId: createdSurface.windowId,
                 ghosttyTabId: createdSurface.tabId,
                 ghosttyTerminalId: createdSurface.terminalId
@@ -71,8 +69,6 @@ final class SessionListViewModel: ObservableObject {
                 sessions.append(session)
                 selectedSessionID = session.id
             }
-
-            try persist()
         } catch {
             lastError = error.localizedDescription
         }
@@ -127,12 +123,6 @@ final class SessionListViewModel: ObservableObject {
                 selectedSessionID = sessions.first?.id
             }
         }
-
-        do {
-            try persist()
-        } catch {
-            lastError = error.localizedDescription
-        }
     }
 
     func removeSelected() {
@@ -152,9 +142,10 @@ final class SessionListViewModel: ObservableObject {
     func moveSelection(_ direction: MoveCommandDirection) {
         guard !sessions.isEmpty else { return }
 
-        let currentIndex = selectedSessionID.flatMap { selectedID in
-            sessions.firstIndex { $0.id == selectedID }
-        } ?? 0
+        let currentIndex =
+            selectedSessionID.flatMap { selectedID in
+                sessions.firstIndex { $0.id == selectedID }
+            } ?? 0
 
         switch direction {
         case .up:
@@ -179,27 +170,5 @@ final class SessionListViewModel: ObservableObject {
         if pendingFocusSessionID == sessionID {
             pendingFocusSessionID = nil
         }
-    }
-
-    private func persist() throws {
-        let state = PersistedSessions(
-            nextSessionOrdinal: nextSessionOrdinal,
-            sessions: sessions
-        )
-
-        guard state != persistedSnapshot else { return }
-
-        try store.save(state)
-        persistedSnapshot = state
-    }
-
-    private func nextOrdinal(after sessions: [GhosttySession]) -> Int {
-        let maximumExistingNumber = sessions.compactMap { session -> Int? in
-            guard session.label.hasPrefix("Session ") else { return nil }
-            return Int(session.label.dropFirst("Session ".count))
-        }
-        .max() ?? 0
-
-        return maximumExistingNumber + 1
     }
 }

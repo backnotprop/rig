@@ -28,51 +28,42 @@ private struct VisualEffectBackground: NSViewRepresentable {
 
 struct ContentView: View {
     @EnvironmentObject private var viewModel: SessionListViewModel
-    @EnvironmentObject private var projects: ProjectsViewModel
+    @EnvironmentObject private var store: ConfigStore
     @FocusState private var isListFocused: Bool
-    @Namespace private var glassNamespace
 
     var body: some View {
-        GlassEffectContainer(spacing: 8) {
-            VStack(spacing: 8) {
-                ZStack(alignment: .leading) {
-                    LauncherRowView(
-                        harnesses: LauncherHarness.defaults,
-                        isDisabled: viewModel.isCreatingSession,
-                        onTap: { _ in
-                            let cwd = projects.selectedProject?.path
-                            Task { await viewModel.createSession(workingDirectory: cwd) }
+        VStack(spacing: 8) {
+            ZStack(alignment: .leading) {
+                LauncherRowView(
+                    harnesses: store.enabledHarnesses,
+                    isDisabled: viewModel.isCreatingSession,
+                    onTap: { harness in
+                        let cwd = store.selectedProject?.path
+                        let projectID = store.selectedProject?.id
+                        Task {
+                            await viewModel.createSession(
+                                workingDirectory: cwd,
+                                command: harness.command,
+                                harnessID: harness.id,
+                                projectID: projectID,
+                                labelPrefix: harness.label
+                            )
                         }
-                    )
-
-                    ProjectSelectorView()
-                        .padding(.leading, 4)
-                }
-                .padding(.top, 28)
-
-                if viewModel.sessions.isEmpty {
-                    emptyState
-                } else {
-                    sessionList
-                }
-            }
-            .padding(8)
-            .frame(
-                minWidth: 176,
-                idealWidth: 240,
-                maxWidth: .infinity,
-                minHeight: 240,
-                idealHeight: 360,
-                maxHeight: .infinity
-            )
-            .background(
-                VisualEffectBackground(
-                    material: .hudWindow,
-                    blendingMode: .behindWindow
+                    }
                 )
-                .overlay(Color.white.opacity(0.04))
-            )
+
+                ProjectSelectorView()
+                    .padding(.leading, 4)
+            }
+            .padding(.top, 28)
+
+            if viewModel.sessions.isEmpty {
+                emptyState
+            } else {
+                sessionList
+            }
         }
+        .padding(8)
         .frame(
             minWidth: 176,
             idealWidth: 240,
@@ -80,6 +71,13 @@ struct ContentView: View {
             minHeight: 240,
             idealHeight: 360,
             maxHeight: .infinity
+        )
+        .background(
+            VisualEffectBackground(
+                material: .hudWindow,
+                blendingMode: .behindWindow
+            )
+            .overlay(Color.white.opacity(0.04))
         )
         .ignoresSafeArea()
         .focusable()
@@ -134,8 +132,7 @@ struct ContentView: View {
                     } label: {
                         SessionRowView(
                             session: session,
-                            isSelected: viewModel.selectedSessionID == session.id,
-                            glassNamespace: glassNamespace
+                            isSelected: viewModel.selectedSessionID == session.id
                         )
                     }
                     .buttonStyle(.plain)
@@ -144,10 +141,11 @@ struct ContentView: View {
                             viewModel.remove(session)
                         }
                     }
-                    .transition(.asymmetric(
-                        insertion: .move(edge: .top).combined(with: .opacity),
-                        removal: .opacity
-                    ))
+                    .transition(
+                        .asymmetric(
+                            insertion: .move(edge: .top).combined(with: .opacity),
+                            removal: .opacity
+                        ))
                 }
             }
             .padding(.horizontal, 2)
@@ -159,17 +157,15 @@ struct ContentView: View {
 
 #Preview {
     ContentView()
-        .environmentObject(SessionListViewModel(
-            controller: PreviewGhosttyController(),
-            store: SessionStore(fileURL: URL(fileURLWithPath: "/tmp/rig-preview.json"))
-        ))
-        .environmentObject(ProjectsViewModel(
-            storeURL: URL(fileURLWithPath: "/tmp/rig-preview-projects.json")
-        ))
+        .environmentObject(SessionListViewModel(controller: PreviewGhosttyController()))
+        .environmentObject(ConfigStore(storeURL: URL(fileURLWithPath: "/tmp/rig-preview-config.json")))
 }
 
 private struct PreviewGhosttyController: GhosttyControlling {
-    func createWindow(workingDirectory: String) async throws -> CreatedGhosttySurface {
+    func createWindow(
+        workingDirectory: String,
+        initialInput: String?
+    ) async throws -> CreatedGhosttySurface {
         CreatedGhosttySurface(
             windowId: "preview-window",
             tabId: "preview-tab",

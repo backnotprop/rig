@@ -2,32 +2,47 @@ import XCTest
 @testable import Rig
 
 final class RigTests: XCTestCase {
-    func testSessionStoreRoundTripsPersistedState() throws {
-        let fileURL = temporaryDirectory().appendingPathComponent("sessions.json")
-        let store = SessionStore(fileURL: fileURL)
-        let session = makeSession(label: "Session 1")
-        let state = PersistedSessions(nextSessionOrdinal: 2, sessions: [session])
+    @MainActor
+    func testConfigStoreSeedsFirstRunWhenFileMissing() throws {
+        let url = temporaryDirectory().appendingPathComponent("config.json")
+        let store = ConfigStore(storeURL: url)
 
-        try store.save(state)
-
-        XCTAssertEqual(try store.load(), state)
+        XCTAssertEqual(store.config.version, 1)
+        XCTAssertEqual(store.config.harnesses.map(\.id), ["pi", "claude-code", "codex", "opencode"])
+        XCTAssertTrue(store.config.projects.isEmpty)
     }
 
-    func testSessionStoreReturnsEmptyStateWhenFileIsMissing() throws {
-        let store = SessionStore(
-            fileURL: temporaryDirectory().appendingPathComponent("missing.json")
-        )
+    @MainActor
+    func testConfigStoreRoundTripsHarnessEdits() throws {
+        let url = temporaryDirectory().appendingPathComponent("config.json")
+        let first = ConfigStore(storeURL: url)
+        first.config.harnesses[0].command = "pi --debug"
+        first.config.harnesses[0].enabled = false
+        // Trigger an immediate write rather than wait for the debounced save.
+        first.flushPendingSave()
 
-        XCTAssertEqual(try store.load(), .empty)
+        let second = ConfigStore(storeURL: url)
+        XCTAssertEqual(second.config.harnesses[0].command, "pi --debug")
+        XCTAssertFalse(second.config.harnesses[0].enabled)
+    }
+
+    @MainActor
+    func testConfigStoreAddProjectMakesItSelectedAndRecent() throws {
+        let url = temporaryDirectory().appendingPathComponent("config.json")
+        let store = ConfigStore(storeURL: url)
+
+        store.addProject(path: "/tmp/foo")
+
+        XCTAssertEqual(store.config.projects.count, 1)
+        XCTAssertEqual(store.selectedProject?.path, "/tmp/foo")
+        XCTAssertEqual(store.recentProjects.first?.path, "/tmp/foo")
     }
 
     @MainActor
     func testCreateSessionUsesSequentialAutoNamesAndHomeDirectory() async throws {
         let controller = FakeGhosttyController()
-        let store = SessionStore(fileURL: temporaryDirectory().appendingPathComponent("sessions.json"))
         let viewModel = SessionListViewModel(
             controller: controller,
-            store: store,
             homeDirectory: "/Users/tester"
         )
 
@@ -42,12 +57,35 @@ final class RigTests: XCTestCase {
     }
 
     @MainActor
-    func testFocusReportsErrorWhenControllerFails() async throws {
+    func testCreateSessionUsesProvidedWorkingDirectoryAndPrefix() async throws {
         let controller = FakeGhosttyController()
-        let store = SessionStore(fileURL: temporaryDirectory().appendingPathComponent("sessions.json"))
         let viewModel = SessionListViewModel(
             controller: controller,
-            store: store,
+            homeDirectory: "/Users/tester"
+        )
+
+        await viewModel.start()
+        await viewModel.createSession(
+            workingDirectory: "/tmp/proj",
+            command: "claude",
+            harnessID: "claude-code",
+            projectID: nil,
+            labelPrefix: "Claude Code"
+        )
+
+        let cwds = await controller.createdWorkingDirectoriesSnapshot()
+        let lastInput = await controller.lastInitialInputSnapshot()
+        XCTAssertEqual(cwds, ["/tmp/proj"])
+        XCTAssertEqual(lastInput, "claude")
+        XCTAssertEqual(viewModel.sessions.first?.label, "Claude Code 1")
+        XCTAssertEqual(viewModel.sessions.first?.harnessID, "claude-code")
+    }
+
+    @MainActor
+    func testFocusReportsErrorWhenControllerFails() async throws {
+        let controller = FakeGhosttyController()
+        let viewModel = SessionListViewModel(
+            controller: controller,
             homeDirectory: "/Users/tester"
         )
 
@@ -65,15 +103,12 @@ final class RigTests: XCTestCase {
     @MainActor
     func testRemoveSelectedDoesNothingWithoutExplicitSelection() async throws {
         let controller = FakeGhosttyController()
-        let store = SessionStore(fileURL: temporaryDirectory().appendingPathComponent("sessions.json"))
-        let session = makeSession(label: "Session 1")
-        try store.save(PersistedSessions(nextSessionOrdinal: 2, sessions: [session]))
-
-        let viewModel = SessionListViewModel(controller: controller, store: store)
+        let viewModel = SessionListViewModel(controller: controller)
         await viewModel.start()
+
         viewModel.removeSelected()
 
-        XCTAssertEqual(viewModel.sessions.map(\.id), [session.id])
+        XCTAssertTrue(viewModel.sessions.isEmpty)
     }
 
     func testGhosttyIntegrationCreateAndFocus() async throws {
@@ -83,7 +118,8 @@ final class RigTests: XCTestCase {
 
         let controller = await AppleScriptGhosttyController()
         let created = try await controller.createWindow(
-            workingDirectory: FileManager.default.homeDirectoryForCurrentUser.path
+            workingDirectory: FileManager.default.homeDirectoryForCurrentUser.path,
+            initialInput: nil
         )
 
         _ = try await controller.focusTerminal(
@@ -93,25 +129,18 @@ final class RigTests: XCTestCase {
         )
     }
 
-    private func makeSession(label: String) -> GhosttySession {
-        GhosttySession(
-            id: UUID(),
-            label: label,
-            ghosttyWindowId: "window-1",
-            ghosttyTabId: "tab-1",
-            ghosttyTerminalId: "terminal-1"
-        )
-    }
-
     private func temporaryDirectory() -> URL {
-        FileManager.default.temporaryDirectory
+        let dir = FileManager.default.temporaryDirectory
             .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        return dir
     }
 }
 
 private actor FakeGhosttyController: GhosttyControlling {
     private var counter = 0
     private var createdWorkingDirectories: [String] = []
+    private var lastInitialInput: String?
     private var shouldFailFocus = false
 
     func setShouldFailFocus(_ value: Bool) {
@@ -122,11 +151,19 @@ private actor FakeGhosttyController: GhosttyControlling {
         createdWorkingDirectories
     }
 
-    func createWindow(workingDirectory: String) async throws -> CreatedGhosttySurface {
+    func lastInitialInputSnapshot() -> String? {
+        lastInitialInput
+    }
+
+    func createWindow(
+        workingDirectory: String,
+        initialInput: String?
+    ) async throws -> CreatedGhosttySurface {
         try Task.checkCancellation()
 
         counter += 1
         createdWorkingDirectories.append(workingDirectory)
+        lastInitialInput = initialInput
 
         return CreatedGhosttySurface(
             windowId: "window-\(counter)",

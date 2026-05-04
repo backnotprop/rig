@@ -3,7 +3,6 @@ import SwiftUI
 struct SessionRowView: View {
     let session: GhosttySession
     let isSelected: Bool
-    let glassNamespace: Namespace.ID
     @State private var isHovered = false
 
     var body: some View {
@@ -39,40 +38,30 @@ struct SessionRowView: View {
     }
 }
 
-private struct SessionRowPreview: View {
-    @Namespace private var glassNamespace
-
-    var body: some View {
-        GlassEffectContainer(spacing: 4) {
-            VStack(spacing: 4) {
-                SessionRowView(
-                    session: GhosttySession(
-                        id: UUID(),
-                        label: "Session 1",
-                        ghosttyWindowId: "w",
-                        ghosttyTabId: "t",
-                        ghosttyTerminalId: "term"
-                    ),
-                    isSelected: true,
-                    glassNamespace: glassNamespace
-                )
-                SessionRowView(
-                    session: GhosttySession(
-                        id: UUID(),
-                        label: "Session 2",
-                        ghosttyWindowId: "w2",
-                        ghosttyTabId: "t2",
-                        ghosttyTerminalId: "term2"
-                    ),
-                    isSelected: false,
-                    glassNamespace: glassNamespace
-                )
-            }
-            .padding()
-        }
-    }
-}
-
 #Preview {
-    SessionRowPreview()
+    VStack(spacing: 4) {
+        SessionRowView(
+            session: GhosttySession(
+                id: UUID(),
+                label: "Session 1",
+                ghosttyWindowId: "w",
+                ghosttyTabId: "t",
+                ghosttyTerminalId: "term"
+            ),
+            isSelected: true
+        )
+        SessionRowView(
+            session: GhosttySession(
+                id: UUID(),
+                label: "Session 2",
+                ghosttyWindowId: "w2",
+                ghosttyTabId: "t2",
+                ghosttyTerminalId: "term2"
+            ),
+            isSelected: false
+        )
+    }
+    .padding()
+    .frame(width: 240)
+    .background(Color.gray.opacity(0.2))
 }

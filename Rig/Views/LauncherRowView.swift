@@ -1,9 +1,10 @@
+import AppKit
 import SwiftUI
 
 struct LauncherRowView: View {
-    let harnesses: [LauncherHarness]
+    let harnesses: [Harness]
     let isDisabled: Bool
-    let onTap: (LauncherHarness) -> Void
+    let onTap: (Harness) -> Void
 
     @State private var hoverX: CGFloat?
 
@@ -39,7 +40,8 @@ struct LauncherRowView: View {
                 case .active(let location):
                     let bounds = clusterBounds(containerWidth: geo.size.width)
                     if location.x < bounds.left - hoverBuffer
-                        || location.x > bounds.right + hoverBuffer {
+                        || location.x > bounds.right + hoverBuffer
+                    {
                         hoverX = nil
                     } else {
                         hoverX = location.x
@@ -70,7 +72,6 @@ struct LauncherRowView: View {
         let restingStride = baseSize + restingSpacing
 
         guard let hoverX else {
-            // Resting: tight cluster at the right.
             let sizes = Array(repeating: baseSize, count: n)
             let centers = (0..<n).map { i in
                 bounds.left + baseSize / 2 + CGFloat(i) * restingStride
@@ -78,20 +79,17 @@ struct LauncherRowView: View {
             return (sizes, centers)
         }
 
-        // Active: focus anchored to the cursor (clamped to cluster bounds).
         let clampedX = max(bounds.left, min(bounds.right, hoverX))
         let restingClusterWidth = max(bounds.right - bounds.left, 1)
         let t = (clampedX - bounds.left) / restingClusterWidth
         let focusF = t * CGFloat(n - 1)
 
-        // Magnify per icon by slot-distance from the (fractional) focus.
         let sizes = (0..<n).map { i -> CGFloat in
             let dist = abs(CGFloat(i) - focusF)
             let factor = exp(-pow(dist / falloffSlots, 2))
             return baseSize + (maxSize - baseSize) * factor
         }
 
-        // Lay out cumulatively in row-local coords.
         var localCenters: [CGFloat] = []
         var cursor: CGFloat = 0
         for i in 0..<n {
@@ -100,18 +98,14 @@ struct LauncherRowView: View {
             cursor += sizes[i] + activeSpacing
         }
 
-        // Interpolate the focus center (between two integer slots).
         let lo = Int(floor(focusF))
         let hi = min(lo + 1, n - 1)
         let frac = focusF - CGFloat(lo)
         let focusCenterLocal = localCenters[lo] * (1 - frac) + localCenters[hi] * frac
 
-        // Shift the row so the focus lands under the (clamped) cursor — but
-        // cap it so the focus icon's own right edge never overflows the panel.
-        // (Other icons can fan past the right edge; they'll get clipped /
-        // faded — which is what we want when they're not the focus.)
         let intendedShift = clampedX - focusCenterLocal
-        let focusRightLocal = (localCenters[lo] + sizes[lo] / 2) * (1 - frac)
+        let focusRightLocal =
+            (localCenters[lo] + sizes[lo] / 2) * (1 - frac)
             + (localCenters[hi] + sizes[hi] / 2) * frac
         let maxShift = (containerWidth - trailingPadding) - focusRightLocal
         let shift = min(intendedShift, maxShift)
@@ -125,7 +119,7 @@ struct LauncherRowView: View {
             stops: [
                 .init(color: .clear, location: 0),
                 .init(color: .black, location: 0.20),
-                .init(color: .black, location: 1)
+                .init(color: .black, location: 1),
             ],
             startPoint: .leading,
             endPoint: .trailing
@@ -134,33 +128,42 @@ struct LauncherRowView: View {
 }
 
 struct LauncherIconView: View {
-    let harness: LauncherHarness
+    let harness: Harness
     let size: CGFloat
 
     var body: some View {
         Circle()
-            .fill(harness.background)
+            .fill(harness.tint.color)
             .frame(width: size, height: size)
-            .overlay(
-                ZStack {
-                    if let inner = harness.innerDisc {
-                        Circle()
-                            .fill(inner)
-                            .padding(size * harness.innerInset)
-                    }
-                    Image(harness.assetName)
-                        .resizable()
-                        .aspectRatio(contentMode: .fit)
-                        .padding(size * harness.iconInset)
-                }
-            )
+            .overlay(iconImage.padding(size * harness.iconInset))
             .clipShape(Circle())
+    }
+
+    @ViewBuilder
+    private var iconImage: some View {
+        switch harness.icon {
+        case .builtin(let name):
+            Image(name)
+                .resizable()
+                .aspectRatio(contentMode: .fit)
+        case .file(let url):
+            if let nsImage = NSImage(contentsOf: url) {
+                Image(nsImage: nsImage)
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+            } else {
+                Image(systemName: "questionmark.square.dashed")
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+                    .foregroundStyle(.tertiary)
+            }
+        }
     }
 }
 
 #Preview {
     LauncherRowView(
-        harnesses: LauncherHarness.defaults,
+        harnesses: Harness.builtinDefaults,
         isDisabled: false,
         onTap: { _ in }
     )

@@ -15,17 +15,16 @@
 		B00000000000000000000006 /* GhosttyState.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000106 /* GhosttyState.swift */; };
 		B00000000000000000000007 /* GhosttyController.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000107 /* GhosttyController.swift */; };
 		B00000000000000000000008 /* AppleScriptGhosttyController.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000108 /* AppleScriptGhosttyController.swift */; };
-		B00000000000000000000009 /* SessionStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000109 /* SessionStore.swift */; };
 		B0000000000000000000000A /* SessionListViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000010A /* SessionListViewModel.swift */; };
 		B0000000000000000000000B /* RigTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000010C /* RigTests.swift */; };
 		B0000000000000000000000C /* RigAutoHideController.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000010E /* RigAutoHideController.swift */; };
-		B0000000000000000000000D /* LauncherHarness.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000010F /* LauncherHarness.swift */; };
 		B0000000000000000000000E /* LauncherRowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000110 /* LauncherRowView.swift */; };
+		B00000000000000000000016 /* Harness.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000118 /* Harness.swift */; };
+		B00000000000000000000017 /* RigConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000119 /* RigConfig.swift */; };
+		B00000000000000000000018 /* ConfigStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000011A /* ConfigStore.swift */; };
 		B0000000000000000000000F /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000111 /* Assets.xcassets */; };
 		B00000000000000000000010 /* Project.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000112 /* Project.swift */; };
-		B00000000000000000000011 /* ProjectsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000113 /* ProjectsViewModel.swift */; };
 		B00000000000000000000012 /* ProjectSelectorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000114 /* ProjectSelectorView.swift */; };
-		B00000000000000000000013 /* HarnessSettingsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000115 /* HarnessSettingsViewModel.swift */; };
 		B00000000000000000000014 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000116 /* SettingsView.swift */; };
 		B00000000000000000000015 /* AgentsSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000117 /* AgentsSettingsView.swift */; };
 /* End PBXBuildFile section */
@@ -51,21 +50,20 @@
 		A00000000000000000000106 /* GhosttyState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GhosttyState.swift; sourceTree = "<group>"; };
 		A00000000000000000000107 /* GhosttyController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GhosttyController.swift; sourceTree = "<group>"; };
 		A00000000000000000000108 /* AppleScriptGhosttyController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleScriptGhosttyController.swift; sourceTree = "<group>"; };
-		A00000000000000000000109 /* SessionStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionStore.swift; sourceTree = "<group>"; };
 		A0000000000000000000010A /* SessionListViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionListViewModel.swift; sourceTree = "<group>"; };
 		A0000000000000000000010B /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		A0000000000000000000010C /* RigTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RigTests.swift; sourceTree = "<group>"; };
 		A0000000000000000000010D /* Rig.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Rig.entitlements; sourceTree = "<group>"; };
 		A0000000000000000000010E /* RigAutoHideController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RigAutoHideController.swift; sourceTree = "<group>"; };
-		A0000000000000000000010F /* LauncherHarness.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LauncherHarness.swift; sourceTree = "<group>"; };
 		A00000000000000000000110 /* LauncherRowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LauncherRowView.swift; sourceTree = "<group>"; };
 		A00000000000000000000111 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		A00000000000000000000112 /* Project.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Project.swift; sourceTree = "<group>"; };
-		A00000000000000000000113 /* ProjectsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProjectsViewModel.swift; sourceTree = "<group>"; };
 		A00000000000000000000114 /* ProjectSelectorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProjectSelectorView.swift; sourceTree = "<group>"; };
-		A00000000000000000000115 /* HarnessSettingsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HarnessSettingsViewModel.swift; sourceTree = "<group>"; };
 		A00000000000000000000116 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		A00000000000000000000117 /* AgentsSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentsSettingsView.swift; sourceTree = "<group>"; };
+		A00000000000000000000118 /* Harness.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Harness.swift; sourceTree = "<group>"; };
+		A00000000000000000000119 /* RigConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RigConfig.swift; sourceTree = "<group>"; };
+		A0000000000000000000011A /* ConfigStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConfigStore.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -136,8 +134,9 @@
 			children = (
 				A00000000000000000000105 /* GhosttySession.swift */,
 				A00000000000000000000106 /* GhosttyState.swift */,
-				A0000000000000000000010F /* LauncherHarness.swift */,
+				A00000000000000000000118 /* Harness.swift */,
 				A00000000000000000000112 /* Project.swift */,
+				A00000000000000000000119 /* RigConfig.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -145,7 +144,7 @@
 		A00000000000000000000007 /* Persistence */ = {
 			isa = PBXGroup;
 			children = (
-				A00000000000000000000109 /* SessionStore.swift */,
+				A0000000000000000000011A /* ConfigStore.swift */,
 			);
 			path = Persistence;
 			sourceTree = "<group>";
@@ -154,8 +153,6 @@
 			isa = PBXGroup;
 			children = (
 				A0000000000000000000010A /* SessionListViewModel.swift */,
-				A00000000000000000000113 /* ProjectsViewModel.swift */,
-				A00000000000000000000115 /* HarnessSettingsViewModel.swift */,
 			);
 			path = ViewModels;
 			sourceTree = "<group>";
@@ -285,15 +282,14 @@
 				B0000000000000000000000C /* RigAutoHideController.swift in Sources */,
 				B00000000000000000000005 /* GhosttySession.swift in Sources */,
 				B00000000000000000000006 /* GhosttyState.swift in Sources */,
-				B0000000000000000000000D /* LauncherHarness.swift in Sources */,
+				B00000000000000000000016 /* Harness.swift in Sources */,
+				B00000000000000000000017 /* RigConfig.swift in Sources */,
 				B00000000000000000000007 /* GhosttyController.swift in Sources */,
 				B00000000000000000000008 /* AppleScriptGhosttyController.swift in Sources */,
-				B00000000000000000000009 /* SessionStore.swift in Sources */,
+				B00000000000000000000018 /* ConfigStore.swift in Sources */,
 				B0000000000000000000000A /* SessionListViewModel.swift in Sources */,
 				B00000000000000000000010 /* Project.swift in Sources */,
-				B00000000000000000000011 /* ProjectsViewModel.swift in Sources */,
 				B00000000000000000000012 /* ProjectSelectorView.swift in Sources */,
-				B00000000000000000000013 /* HarnessSettingsViewModel.swift in Sources */,
 				B00000000000000000000014 /* SettingsView.swift in Sources */,
 				B00000000000000000000015 /* AgentsSettingsView.swift in Sources */,
 				B00000000000000000000003 /* ContentView.swift in Sources */,

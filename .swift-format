@@ -1,0 +1,18 @@
+{
+  "version": 1,
+  "lineLength": 110,
+  "indentation": { "spaces": 4 },
+  "tabWidth": 4,
+  "respectsExistingLineBreaks": true,
+  "lineBreakBeforeControlFlowKeywords": false,
+  "lineBreakBeforeEachArgument": false,
+  "rules": {
+    "AlwaysUseLowerCamelCase": true,
+    "NoLeadingUnderscores": false,
+    "ValidateDocumentationComments": false,
+    "NoAccessLevelOnExtensionDeclaration": true,
+    "NeverForceUnwrap": false,
+    "NeverUseImplicitlyUnwrappedOptionals": true,
+    "OneCasePerLine": true
+  }
+}

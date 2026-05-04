@@ -1,3 +1,9 @@
+// swift-format-ignore-file
+// Reason: this file embeds AppleScript inside Swift """..."""  multiline string
+// literals; swift-format treats the indentation inside those heredocs as Swift code
+// and produces hundreds of false-positive warnings. None of the warnings outside the
+// heredocs are ignored — there are none.
+
 import AppKit
 import Foundation
 
@@ -29,11 +35,21 @@ final class AppleScriptGhosttyController: GhosttyControlling {
     private let decoder = JSONDecoder()
     private let ghosttyApplicationPath = "/Applications/Ghostty.app"
 
-    func createWindow(workingDirectory: String) async throws -> CreatedGhosttySurface {
+    func createWindow(
+        workingDirectory: String,
+        initialInput: String?
+    ) async throws -> CreatedGhosttySurface {
         try Task.checkCancellation()
 
         guard FileManager.default.fileExists(atPath: ghosttyApplicationPath) else {
             throw GhosttyControllerError.ghosttyNotInstalled
+        }
+
+        let initialInputClause: String
+        if let initialInput, !initialInput.isEmpty {
+            initialInputClause = "set initial input of cfg to \(Self.appleScriptLiteral(initialInput)) & linefeed"
+        } else {
+            initialInputClause = ""
         }
 
         let json = try run(script: """
@@ -52,7 +68,7 @@ final class AppleScriptGhosttyController: GhosttyControlling {
 
             set cfg to new surface configuration
             set initial working directory of cfg to \(Self.appleScriptLiteral(workingDirectory))
-            set initial input of cfg to "pi" & linefeed
+            \(initialInputClause)
             set createdWin to new window with configuration cfg
 
             set targetWin to missing value

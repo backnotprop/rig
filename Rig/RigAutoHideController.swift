@@ -78,7 +78,7 @@ final class RigAutoHideController {
             existing.topAnchor.constraint(equalTo: container.topAnchor),
             existing.leadingAnchor.constraint(equalTo: container.leadingAnchor),
             existing.trailingAnchor.constraint(equalTo: container.trailingAnchor),
-            existing.bottomAnchor.constraint(equalTo: container.bottomAnchor)
+            existing.bottomAnchor.constraint(equalTo: container.bottomAnchor),
         ])
 
         container.onMouseEntered = { [weak self] in self?.reveal() }
@@ -111,7 +111,7 @@ final class RigAutoHideController {
         trigger.collectionBehavior = [
             .canJoinAllSpaces,
             .fullScreenAuxiliary,
-            .stationary
+            .stationary,
         ]
         trigger.isOpaque = false
         trigger.backgroundColor = .clear

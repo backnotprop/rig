@@ -24,12 +24,10 @@ final class RigPanel: NSPanel {
 
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
+    let configStore = ConfigStore()
     let viewModel = SessionListViewModel(
-        controller: AppleScriptGhosttyController(),
-        store: SessionStore()
+        controller: AppleScriptGhosttyController()
     )
-    let projectsViewModel = ProjectsViewModel()
-    let harnessSettingsViewModel = HarnessSettingsViewModel()
 
     private var panel: RigPanel?
     private var autoHide: RigAutoHideController?
@@ -46,6 +44,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         false
     }
 
+    nonisolated func applicationWillTerminate(_ notification: Notification) {
+        MainActor.assumeIsolated {
+            configStore.flushPendingSave()
+        }
+    }
+
     private func setupPanel() {
         let panel = RigPanel(
             contentRect: NSRect(x: 0, y: 0, width: 240, height: 360),
@@ -54,7 +58,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 .closable,
                 .resizable,
                 .fullSizeContentView,
-                .nonactivatingPanel
+                .nonactivatingPanel,
             ],
             backing: .buffered,
             defer: false
@@ -63,7 +67,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         panel.contentView = NSHostingView(
             rootView: ContentView()
                 .environmentObject(viewModel)
-                .environmentObject(projectsViewModel)
+                .environmentObject(configStore)
         )
 
         panel.title = "Rig"
@@ -83,7 +87,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         panel.collectionBehavior = [
             .canJoinAllSpaces,
             .fullScreenAuxiliary,
-            .stationary
+            .stationary,
         ]
 
         autoHide = RigAutoHideController(panel: panel)
@@ -92,8 +96,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         DispatchQueue.main.async { [weak self] in
             self?.positionTrafficLights(in: panel)
         }
-
-        projectsViewModel.start()
 
         Task { @MainActor [viewModel] in
             await viewModel.start()
@@ -110,7 +112,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
 
         let view = SettingsView()
-            .environmentObject(harnessSettingsViewModel)
+            .environmentObject(configStore)
 
         let window = NSWindow(
             contentRect: NSRect(x: 0, y: 0, width: 700, height: 500),

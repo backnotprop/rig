@@ -179,6 +179,31 @@ top in the overlap.
 - **Don't try to embed Ghostty.** Spec is explicit: launcher and switcher only.
 - **Don't add a polling reconciliation loop.** Removed for performance.
 
+## Data model & persistence
+
+One file: `~/Library/Application Support/Rig/config.json`. Everything user-configurable
+(harnesses, projects, preferences) is in there. Versioned (`version: 1`), pretty-printed,
+sorted keys.
+
+`ConfigStore` (`Rig/Persistence/ConfigStore.swift`) is the single source of truth:
+
+- Holds `@Published var config: RigConfig`. Views observe via
+  `@EnvironmentObject store: ConfigStore`.
+- Auto-saves on any mutation, **debounced 500ms** so dragging a slider produces one
+  write, not hundreds.
+- `firstRun()` seeds the file with built-in harness defaults on first launch.
+- One-time migration: if `projects.json` exists from the old layout, its contents are
+  folded into `config.json` and the old file is deleted. `sessions.json` is deleted
+  unconditionally — sessions are no longer persisted.
+
+`Harness` uses `HarnessIcon` (enum: `.builtin(name)` / `.file(URL)`) so user-supplied
+SVGs slot in later without a model change. `HexColor` is a `Codable`-friendly string
+wrapper that bridges to `SwiftUI.Color` (SwiftUI's `Color` is not Codable).
+
+`GhosttySession` is **runtime-only** — not Codable, not persisted. Each Rig launch
+starts with an empty session list. The struct stores `harnessID` and `projectID`
+fields that future "session restore from intent" features can use.
+
 ## Useful files
 
 - `SPEC.md` — original product spec.
@@ -197,6 +222,5 @@ open .build/Build/Products/Debug/Rig.app
 Clear persisted state during development:
 
 ```sh
-rm -f "$HOME/Library/Application Support/Rig/sessions.json"
-rm -f "$HOME/Library/Application Support/Rig/projects.json"
+rm -f "$HOME/Library/Application Support/Rig/config.json"
 ```
