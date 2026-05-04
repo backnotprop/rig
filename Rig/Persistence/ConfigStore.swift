@@ -198,3 +198,62 @@ extension ConfigStore {
         config.harnesses.first { $0.id == id }
     }
 }
+
+// MARK: - Saved prompts
+extension ConfigStore {
+    /// Prompts in the order the dock should render them, given the current
+    /// sort preference. `.custom` is array-order; `.created` is newest-first;
+    /// `.lastUsed` puts recently-used ones up front and sinks unused ones to
+    /// the bottom in their stored order (so the user's hand-picked order
+    /// still shows for never-used prompts).
+    var displayPrompts: [SavedPrompt] {
+        let prompts = config.prompts
+        switch config.preferences.promptSortOrder {
+        case .lastUsed:
+            return prompts.sorted { lhs, rhs in
+                switch (lhs.lastUsedAt, rhs.lastUsedAt) {
+                case let (l?, r?): return l > r
+                case (.some, nil): return true
+                case (nil, .some): return false
+                case (nil, nil): return false
+                }
+            }
+        case .created:
+            return prompts.sorted { $0.createdAt > $1.createdAt }
+        case .custom:
+            return prompts
+        }
+    }
+
+    @discardableResult
+    func addPrompt() -> SavedPrompt.ID {
+        let prompt = SavedPrompt()
+        config.prompts.append(prompt)
+        return prompt.id
+    }
+
+    func removePrompt(id: SavedPrompt.ID) {
+        config.prompts.removeAll { $0.id == id }
+    }
+
+    /// Apply a List drag-reorder. We commit whatever the user is *currently
+    /// looking at* (post-sort) as the new array order, then perform the move
+    /// against that — otherwise dragging row 1 down while in `.lastUsed`
+    /// would shuffle some unrelated underlying-array entry. Flipping to
+    /// `.custom` is the whole point: the gesture is the source of truth now.
+    func movePromptsInVisibleOrder(
+        currentlyVisible: [SavedPrompt],
+        fromOffsets source: IndexSet,
+        toOffset destination: Int
+    ) {
+        var ordered = currentlyVisible
+        ordered.move(fromOffsets: source, toOffset: destination)
+        config.prompts = ordered
+        config.preferences.promptSortOrder = .custom
+    }
+
+    func recordPromptUse(id: SavedPrompt.ID) {
+        guard let idx = config.prompts.firstIndex(where: { $0.id == id }) else { return }
+        config.prompts[idx].lastUsedAt = .now
+    }
+}

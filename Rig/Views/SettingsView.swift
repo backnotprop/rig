@@ -8,6 +8,8 @@ struct SettingsView: View {
             List(selection: $selection) {
                 Label("Agents", systemImage: "sparkles.rectangle.stack")
                     .tag(SettingsTab.agents)
+                Label("Prompts", systemImage: "quote.bubble")
+                    .tag(SettingsTab.prompts)
                 Label("Projects", systemImage: "folder")
                     .tag(SettingsTab.projects)
             }
@@ -17,6 +19,9 @@ struct SettingsView: View {
             case .agents:
                 AgentsSettingsView()
                     .navigationTitle("Agents")
+            case .prompts:
+                PromptsSettingsView()
+                    .navigationTitle("Prompts")
             case .projects:
                 ProjectsSettingsView()
                     .navigationTitle("Projects")
@@ -28,5 +33,6 @@ struct SettingsView: View {
 
 private enum SettingsTab: Hashable {
     case agents
+    case prompts
     case projects
 }

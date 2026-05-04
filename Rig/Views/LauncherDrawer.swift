@@ -55,7 +55,9 @@ struct LauncherDrawer: View {
     let onBackground: (String) -> Void
     let onClose: () -> Void
 
+    @EnvironmentObject private var store: ConfigStore
     @State private var prompt: String = ""
+    @State private var isLibraryOpen: Bool = false
     @FocusState private var isPromptFocused: Bool
 
     var body: some View {
@@ -103,6 +105,34 @@ struct LauncherDrawer: View {
                     systemImage: "arrow.up.right.and.arrow.down.left",
                     action: { onBackground(prompt) }
                 )
+                DrawerActionButton(
+                    tooltip: store.config.prompts.isEmpty
+                        ? "No saved prompts — add some in Settings"
+                        : "Saved prompts",
+                    systemImage: "quote.bubble",
+                    isActive: isLibraryOpen,
+                    action: {
+                        withAnimation(.spring(response: 0.32, dampingFraction: 0.82)) {
+                            isLibraryOpen.toggle()
+                        }
+                    }
+                )
+                .disabled(store.config.prompts.isEmpty)
+                .opacity(store.config.prompts.isEmpty ? 0.4 : 1.0)
+            }
+
+            if isLibraryOpen && !store.config.prompts.isEmpty {
+                PromptDockView(prompts: store.displayPrompts) { selected in
+                    prompt = selected.body
+                    store.recordPromptUse(id: selected.id)
+                    isPromptFocused = true
+                }
+                .transition(
+                    .asymmetric(
+                        insertion: .move(edge: .top).combined(with: .opacity),
+                        removal: .opacity
+                    )
+                )
             }
         }
         .padding(10)
@@ -121,6 +151,7 @@ struct LauncherDrawer: View {
 private struct DrawerActionButton: View {
     let tooltip: String
     let systemImage: String
+    var isActive: Bool = false
     let action: () -> Void
 
     @State private var isHovered = false
@@ -133,7 +164,7 @@ private struct DrawerActionButton: View {
                 .frame(width: 32, height: 28)
                 .background(
                     RoundedRectangle(cornerRadius: 6, style: .continuous)
-                        .fill(Color.white.opacity(isHovered ? 0.12 : 0.06))
+                        .fill(Color.white.opacity(backgroundOpacity))
                 )
                 .contentShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
         }
@@ -141,5 +172,177 @@ private struct DrawerActionButton: View {
         .help(tooltip)
         .onHover { isHovered = $0 }
         .animation(.easeInOut(duration: 0.12), value: isHovered)
+        .animation(.easeInOut(duration: 0.12), value: isActive)
+    }
+
+    private var backgroundOpacity: Double {
+        if isActive { return 0.18 }
+        if isHovered { return 0.12 }
+        return 0.06
+    }
+}
+
+// MARK: - Prompt dock
+//
+// Same magnification model as the harness row above, but anchored to the LEFT
+// edge of the drawer so the chips read as a stash you peek into from the left.
+// Items overlap at rest (negative spacing) and spread apart under the cursor.
+
+private struct PromptDockView: View {
+    let prompts: [SavedPrompt]
+    let onSelect: (SavedPrompt) -> Void
+
+    @State private var hoverX: CGFloat?
+
+    private let baseSize: CGFloat = 22
+    private let maxSize: CGFloat = 34
+    private let falloffSlots: CGFloat = 1.4
+    private let restingSpacing: CGFloat = -10
+    private let activeSpacing: CGFloat = 4
+    private let leadingPadding: CGFloat = 4
+    private let hoverBuffer: CGFloat = 24
+
+    var body: some View {
+        GeometryReader { geo in
+            let layout = computeLayout(containerWidth: geo.size.width)
+
+            ZStack {
+                ForEach(Array(prompts.enumerated()).reversed(), id: \.element.id) { index, prompt in
+                    Button {
+                        onSelect(prompt)
+                    } label: {
+                        PromptChipView(
+                            prompt: prompt,
+                            tint: prompt.tint.color,
+                            size: layout.sizes[index]
+                        )
+                    }
+                    .buttonStyle(.plain)
+                    .help(prompt.body)
+                    .position(x: layout.centers[index], y: geo.size.height / 2)
+                }
+            }
+            .frame(width: geo.size.width, height: geo.size.height)
+            .contentShape(Rectangle())
+            .onContinuousHover(coordinateSpace: .local) { phase in
+                switch phase {
+                case .active(let location):
+                    let bounds = clusterBounds(containerWidth: geo.size.width)
+                    if location.x < bounds.left - hoverBuffer
+                        || location.x > bounds.right + hoverBuffer
+                    {
+                        hoverX = nil
+                    } else {
+                        hoverX = location.x
+                    }
+                case .ended:
+                    hoverX = nil
+                }
+            }
+        }
+        .frame(height: maxSize + 6)
+        .frame(maxWidth: .infinity)
+        .animation(.spring(response: 0.22, dampingFraction: 0.78), value: hoverX)
+    }
+
+    private func clusterBounds(containerWidth: CGFloat) -> (left: CGFloat, right: CGFloat) {
+        let restingStride = baseSize + restingSpacing
+        let clusterWidth = baseSize + CGFloat(prompts.count - 1) * restingStride
+        return (leadingPadding, leadingPadding + clusterWidth)
+    }
+
+    private func computeLayout(containerWidth: CGFloat) -> (sizes: [CGFloat], centers: [CGFloat]) {
+        let n = prompts.count
+        guard n > 0 else { return ([], []) }
+
+        let bounds = clusterBounds(containerWidth: containerWidth)
+        let restingStride = baseSize + restingSpacing
+
+        guard let hoverX else {
+            let sizes = Array(repeating: baseSize, count: n)
+            let centers = (0..<n).map { i in
+                bounds.left + baseSize / 2 + CGFloat(i) * restingStride
+            }
+            return (sizes, centers)
+        }
+
+        // Degenerate case: a single prompt has no neighbors to spread against,
+        // and the focusF/lo math below would index past the only element. Just
+        // pop it to maxSize on hover.
+        guard n > 1 else {
+            return ([maxSize], [bounds.left + maxSize / 2])
+        }
+
+        let clampedX = max(bounds.left, min(bounds.right, hoverX))
+        let restingClusterWidth = max(bounds.right - bounds.left, 1)
+        let t = (clampedX - bounds.left) / restingClusterWidth
+        let focusF = t * CGFloat(n - 1)
+
+        let sizes = (0..<n).map { i -> CGFloat in
+            let dist = abs(CGFloat(i) - focusF)
+            let factor = exp(-pow(dist / falloffSlots, 2))
+            return baseSize + (maxSize - baseSize) * factor
+        }
+
+        var localCenters: [CGFloat] = []
+        var cursor: CGFloat = 0
+        for i in 0..<n {
+            let center = cursor + sizes[i] / 2
+            localCenters.append(center)
+            cursor += sizes[i] + activeSpacing
+        }
+
+        let lo = Int(floor(focusF))
+        let hi = min(lo + 1, n - 1)
+        let frac = focusF - CGFloat(lo)
+        let focusCenterLocal = localCenters[lo] * (1 - frac) + localCenters[hi] * frac
+        let focusLeftLocal =
+            (localCenters[lo] - sizes[lo] / 2) * (1 - frac)
+            + (localCenters[hi] - sizes[hi] / 2) * frac
+
+        // Mirror of the harness-row right-edge cap: keep the focused chip's left
+        // edge from sliding past the leading padding when the cursor's near the
+        // start of the cluster.
+        let intendedShift = clampedX - focusCenterLocal
+        let minShift = leadingPadding - focusLeftLocal
+        let shift = max(intendedShift, minShift)
+        let containerCenters = localCenters.map { $0 + shift }
+
+        return (sizes, containerCenters)
+    }
+}
+
+private struct PromptChipView: View {
+    let prompt: SavedPrompt
+    let tint: Color
+    let size: CGFloat
+
+    // Reference size at which the text is rendered at 1×. Anything larger or
+    // smaller is reached via scaleEffect, which IS animatable (CGAffineTransform).
+    // We pin to PromptDockView.baseSize so the text reads at native crispness
+    // at rest and scales up under the cursor.
+    private let referenceSize: CGFloat = 22
+
+    var body: some View {
+        Circle()
+            .fill(tint)
+            .frame(width: size, height: size)
+            .overlay(
+                // Why scaleEffect (not minimumScaleFactor or size-derived font):
+                // .minimumScaleFactor recomputes its scale at each layout pass,
+                // so it steps discretely while the surrounding frame interpolates
+                // smoothly via spring — the letters end up drifting around inside
+                // the circle. scaleEffect is an affine transform that the
+                // animation system interpolates frame-by-frame, so the glyph
+                // stays locked to the chip.
+                Text(prompt.marker)
+                    .font(.system(size: referenceSize * 0.5, weight: .semibold, design: .rounded))
+                    .foregroundStyle(Color.white.opacity(0.92))
+                    .scaleEffect(size / referenceSize)
+            )
+            .overlay(
+                Circle()
+                    .strokeBorder(Color.white.opacity(0.2), lineWidth: 1.0)
+            )
     }
 }

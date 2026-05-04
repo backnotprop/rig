@@ -1,3 +1,4 @@
+import AppKit
 import Foundation
 import SwiftUI
 
@@ -146,6 +147,21 @@ struct HexColor: Codable, Equatable, ExpressibleByStringLiteral, Hashable {
         default:
             return .black
         }
+    }
+
+    /// Round-trip a SwiftUI `Color` (typically from a `ColorPicker`) into our
+    /// hex string. Forces sRGB so the bytes we persist match what the user
+    /// picked regardless of the picker's working color space.
+    init(color: Color) {
+        let nsColor = NSColor(color)
+        let rgb = nsColor.usingColorSpace(.sRGB) ?? nsColor
+        func byte(_ v: CGFloat) -> Int {
+            Int(max(0, min(255, (v * 255).rounded())))
+        }
+        let r = byte(rgb.redComponent)
+        let g = byte(rgb.greenComponent)
+        let b = byte(rgb.blueComponent)
+        self.init(String(format: "#%02X%02X%02X", r, g, b))
     }
 }
 
