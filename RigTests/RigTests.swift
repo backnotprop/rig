@@ -111,6 +111,59 @@ final class RigTests: XCTestCase {
         XCTAssertTrue(viewModel.sessions.isEmpty)
     }
 
+    func testComposedCommandReturnsBareCommandWhenNoFlagsSet() {
+        let pi = Harness.builtinDefaults.first { $0.id == "pi" }!
+        XCTAssertEqual(HarnessSchemas.composedCommand(for: pi), "pi")
+    }
+
+    func testComposedCommandAppendsToggleCLIFlag() {
+        var codex = Harness.builtinDefaults.first { $0.id == "codex" }!
+        codex.flags["yolo"] = .bool(true)
+        XCTAssertEqual(HarnessSchemas.composedCommand(for: codex), "codex --yolo")
+    }
+
+    func testComposedCommandSkipsToggleWhenFalse() {
+        var codex = Harness.builtinDefaults.first { $0.id == "codex" }!
+        codex.flags["yolo"] = .bool(false)
+        XCTAssertEqual(HarnessSchemas.composedCommand(for: codex), "codex")
+    }
+
+    func testComposedCommandClaudeWithYoloAndPicker() {
+        var claude = Harness.builtinDefaults.first { $0.id == "claude-code" }!
+        claude.flags["dangerously-skip-permissions"] = .bool(true)
+        claude.flags["permission-mode"] = .string("plan")
+        XCTAssertEqual(
+            HarnessSchemas.composedCommand(for: claude),
+            "claude --dangerously-skip-permissions --permission-mode plan"
+        )
+    }
+
+    func testComposedCommandOmitsPickerWhenDefault() {
+        var claude = Harness.builtinDefaults.first { $0.id == "claude-code" }!
+        claude.flags["permission-mode"] = .string("default")
+        XCTAssertEqual(HarnessSchemas.composedCommand(for: claude), "claude")
+    }
+
+    func testComposedCommandPreservesUserExtraArgsBeforeFlags() {
+        var claude = Harness.builtinDefaults.first { $0.id == "claude-code" }!
+        claude.command = "claude --verbose"
+        claude.flags["dangerously-skip-permissions"] = .bool(true)
+        XCTAssertEqual(
+            HarnessSchemas.composedCommand(for: claude),
+            "claude --verbose --dangerously-skip-permissions"
+        )
+    }
+
+    func testComposedCommandWithEmptyCommandStillEmitsFlags() {
+        var claude = Harness.builtinDefaults.first { $0.id == "claude-code" }!
+        claude.command = ""
+        claude.flags["dangerously-skip-permissions"] = .bool(true)
+        XCTAssertEqual(
+            HarnessSchemas.composedCommand(for: claude),
+            "--dangerously-skip-permissions"
+        )
+    }
+
     func testGhosttyIntegrationCreateAndFocus() async throws {
         guard ProcessInfo.processInfo.environment["RUN_GHOSTTY_INTEGRATION"] == "1" else {
             throw XCTSkip("Set RUN_GHOSTTY_INTEGRATION=1 to create and focus a real Ghostty window.")

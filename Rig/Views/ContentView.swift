@@ -91,10 +91,11 @@ struct ContentView: View {
                     onTap: { harness in
                         let cwd = store.selectedProject?.path
                         let projectID = store.selectedProject?.id
+                        let composed = HarnessSchemas.composedCommand(for: harness)
                         Task {
                             await viewModel.createSession(
                                 workingDirectory: cwd,
-                                command: harness.command,
+                                command: composed,
                                 harnessID: harness.id,
                                 projectID: projectID,
                                 labelPrefix: harness.label

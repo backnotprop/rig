@@ -9,6 +9,73 @@ struct Harness: Identifiable, Codable, Equatable {
     var icon: HarnessIcon
     var tint: HexColor
     var iconInset: Double
+    var flags: [String: FlagValue] = [:]
+
+    private enum CodingKeys: String, CodingKey {
+        case id, label, command, enabled, icon, tint, iconInset, flags
+    }
+
+    init(
+        id: String,
+        label: String,
+        command: String,
+        enabled: Bool,
+        icon: HarnessIcon,
+        tint: HexColor,
+        iconInset: Double,
+        flags: [String: FlagValue] = [:]
+    ) {
+        self.id = id
+        self.label = label
+        self.command = command
+        self.enabled = enabled
+        self.icon = icon
+        self.tint = tint
+        self.iconInset = iconInset
+        self.flags = flags
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        self.id = try c.decode(String.self, forKey: .id)
+        self.label = try c.decode(String.self, forKey: .label)
+        self.command = try c.decode(String.self, forKey: .command)
+        self.enabled = try c.decode(Bool.self, forKey: .enabled)
+        self.icon = try c.decode(HarnessIcon.self, forKey: .icon)
+        self.tint = try c.decode(HexColor.self, forKey: .tint)
+        self.iconInset = try c.decode(Double.self, forKey: .iconInset)
+        // flags is optional in old configs; default to empty.
+        self.flags = (try? c.decode([String: FlagValue].self, forKey: .flags)) ?? [:]
+    }
+}
+
+/// A flag value persisted in `Harness.flags`. Encodes/decodes as the bare value
+/// (true/false for bool, "plan" for string) so the JSON stays human-readable.
+enum FlagValue: Codable, Equatable {
+    case bool(Bool)
+    case string(String)
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.singleValueContainer()
+        if let b = try? c.decode(Bool.self) {
+            self = .bool(b)
+        } else if let s = try? c.decode(String.self) {
+            self = .string(s)
+        } else {
+            throw DecodingError.typeMismatch(
+                FlagValue.self,
+                .init(codingPath: decoder.codingPath, debugDescription: "Expected Bool or String")
+            )
+        }
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var c = encoder.singleValueContainer()
+        switch self {
+        case .bool(let b): try c.encode(b)
+        case .string(let s): try c.encode(s)
+        }
+    }
 }
 
 enum HarnessIcon: Codable, Equatable {

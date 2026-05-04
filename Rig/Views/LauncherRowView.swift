@@ -137,6 +137,13 @@ struct LauncherIconView: View {
             .frame(width: size, height: size)
             .overlay(iconImage.padding(size * harness.iconInset))
             .clipShape(Circle())
+            // Thin hairline ring so overlapping black circles read as distinct
+            // (Slack / iMessage stacked-avatar idiom). Above the clipShape so the
+            // ring isn't trimmed at the seam.
+            .overlay(
+                Circle()
+                    .strokeBorder(Color.white.opacity(0.18), lineWidth: 1.2)
+            )
     }
 
     @ViewBuilder

@@ -6,12 +6,6 @@ struct ProjectsSettingsView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 12) {
-                Text("PROJECTS")
-                    .font(.caption)
-                    .fontWeight(.semibold)
-                    .foregroundStyle(.secondary)
-                    .padding(.leading, 6)
-
                 if store.config.projects.isEmpty {
                     emptyState
                 } else {
