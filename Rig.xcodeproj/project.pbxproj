@@ -33,6 +33,10 @@
 		B0000000000000000000001C /* SavedPrompt.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000011E /* SavedPrompt.swift */; };
 		B0000000000000000000001D /* PromptsSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000011F /* PromptsSettingsView.swift */; };
 		B0000000000000000000001E /* GeneralSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000120 /* GeneralSettingsView.swift */; };
+		B0000000000000000000001F /* ReferenceItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000121 /* ReferenceItem.swift */; };
+		B00000000000000000000020 /* ShellRunner.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000122 /* ShellRunner.swift */; };
+		B00000000000000000000021 /* GitHubReferenceProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000123 /* GitHubReferenceProvider.swift */; };
+		B00000000000000000000022 /* ReferencesPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000124 /* ReferencesPanel.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -76,6 +80,10 @@
 		A0000000000000000000011E /* SavedPrompt.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SavedPrompt.swift; sourceTree = "<group>"; };
 		A0000000000000000000011F /* PromptsSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PromptsSettingsView.swift; sourceTree = "<group>"; };
 		A00000000000000000000120 /* GeneralSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeneralSettingsView.swift; sourceTree = "<group>"; };
+		A00000000000000000000121 /* ReferenceItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReferenceItem.swift; sourceTree = "<group>"; };
+		A00000000000000000000122 /* ShellRunner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShellRunner.swift; sourceTree = "<group>"; };
+		A00000000000000000000123 /* GitHubReferenceProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GitHubReferenceProvider.swift; sourceTree = "<group>"; };
+		A00000000000000000000124 /* ReferencesPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReferencesPanel.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -123,6 +131,7 @@
 				A00000000000000000000005 /* Controllers */,
 				A00000000000000000000006 /* Models */,
 				A00000000000000000000007 /* Persistence */,
+				A0000000000000000000000B /* References */,
 				A00000000000000000000008 /* ViewModels */,
 				A00000000000000000000009 /* Views */,
 				A0000000000000000000010B /* Info.plist */,
@@ -137,8 +146,17 @@
 			children = (
 				A00000000000000000000107 /* GhosttyController.swift */,
 				A00000000000000000000108 /* AppleScriptGhosttyController.swift */,
+				A00000000000000000000122 /* ShellRunner.swift */,
 			);
 			path = Controllers;
+			sourceTree = "<group>";
+		};
+		A0000000000000000000000B /* References */ = {
+			isa = PBXGroup;
+			children = (
+				A00000000000000000000123 /* GitHubReferenceProvider.swift */,
+			);
+			path = References;
 			sourceTree = "<group>";
 		};
 		A00000000000000000000006 /* Models */ = {
@@ -151,6 +169,7 @@
 				A00000000000000000000119 /* RigConfig.swift */,
 				A0000000000000000000011C /* HarnessFlagSchema.swift */,
 				A0000000000000000000011E /* SavedPrompt.swift */,
+				A00000000000000000000121 /* ReferenceItem.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -184,6 +203,7 @@
 				A0000000000000000000011D /* LauncherDrawer.swift */,
 				A0000000000000000000011F /* PromptsSettingsView.swift */,
 				A00000000000000000000120 /* GeneralSettingsView.swift */,
+				A00000000000000000000124 /* ReferencesPanel.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -316,6 +336,10 @@
 				B0000000000000000000001C /* SavedPrompt.swift in Sources */,
 				B0000000000000000000001D /* PromptsSettingsView.swift in Sources */,
 				B0000000000000000000001E /* GeneralSettingsView.swift in Sources */,
+				B0000000000000000000001F /* ReferenceItem.swift in Sources */,
+				B00000000000000000000020 /* ShellRunner.swift in Sources */,
+				B00000000000000000000021 /* GitHubReferenceProvider.swift in Sources */,
+				B00000000000000000000022 /* ReferencesPanel.swift in Sources */,
 				B00000000000000000000003 /* ContentView.swift in Sources */,
 				B00000000000000000000004 /* SessionRowView.swift in Sources */,
 				B0000000000000000000000E /* LauncherRowView.swift in Sources */,

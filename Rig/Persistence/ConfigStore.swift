@@ -257,3 +257,25 @@ extension ConfigStore {
         config.prompts[idx].lastUsedAt = .now
     }
 }
+
+// MARK: - Reference scopes (per-provider recents)
+extension ConfigStore {
+    private static let recentScopeLimit = 5
+
+    func recentScopes(providerID: String) -> [ReferenceScope] {
+        config.preferences.recentScopesByProvider[providerID] ?? []
+    }
+
+    /// Bumps `scope` to the front of the provider's recent list (deduped),
+    /// capped at 5. Called on user-driven picks only — auto-detected scopes
+    /// stay out so "recent" stays meaningful.
+    func recordRecentScope(providerID: String, scope: ReferenceScope) {
+        var list = config.preferences.recentScopesByProvider[providerID] ?? []
+        list.removeAll { $0.id == scope.id }
+        list.insert(scope, at: 0)
+        if list.count > Self.recentScopeLimit {
+            list = Array(list.prefix(Self.recentScopeLimit))
+        }
+        config.preferences.recentScopesByProvider[providerID] = list
+    }
+}

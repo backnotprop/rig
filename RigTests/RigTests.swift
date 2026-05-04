@@ -164,6 +164,109 @@ final class RigTests: XCTestCase {
         )
     }
 
+    func testShellRunnerResolveReturnsNilForUnknownTool() {
+        XCTAssertNil(ShellRunner.resolve("definitely-not-a-real-tool-xyz"))
+    }
+
+    func testShellRunnerResolveFindsCommonTool() {
+        // `ls` exists at /bin/ls on every macOS. If $PATH is empty in the
+        // test runner this still has to be found — we don't fall back to /bin
+        // explicitly, so this also documents the fallback set.
+        let path = ShellRunner.resolve("ls")
+        XCTAssertNotNil(path)
+    }
+
+    func testGitHubProviderDecodesIssueRows() {
+        // A condensed but real-shape fixture from `gh issue list --json
+        // number,title,url,author,updatedAt`. Pinned so a future schema
+        // change in `gh` breaks the test loudly rather than silently
+        // emitting empty subtitles.
+        let json = """
+        [
+          {
+            "number": 42,
+            "title": "Crash on launch when config is empty",
+            "url": "https://github.com/example/repo/issues/42",
+            "updatedAt": "2026-04-30T12:34:56Z",
+            "author": { "login": "alice" }
+          },
+          {
+            "number": 7,
+            "title": "Deleted-author edge case",
+            "url": "https://github.com/example/repo/issues/7",
+            "updatedAt": "2026-04-29T08:00:00Z",
+            "author": {}
+          }
+        ]
+        """
+
+        let provider = GitHubReferenceProvider()
+        let items = provider.decodeRows(json, flavor: "issue")
+
+        XCTAssertEqual(items.count, 2)
+        XCTAssertEqual(items[0].id, "issue-42")
+        XCTAssertEqual(items[0].title, "Crash on launch when config is empty")
+        XCTAssertEqual(items[0].url.absoluteString, "https://github.com/example/repo/issues/42")
+        XCTAssertNotNil(items[0].subtitle)
+        XCTAssertTrue(items[0].subtitle?.contains("#42") == true)
+        XCTAssertTrue(items[0].subtitle?.contains("@alice") == true)
+
+        XCTAssertEqual(items[1].id, "issue-7")
+        // Deleted author — subtitle should still render but skip the @login part.
+        XCTAssertTrue(items[1].subtitle?.contains("#7") == true)
+        XCTAssertFalse(items[1].subtitle?.contains("@") == true)
+    }
+
+    func testGitHubParseRepoIdentifierAcceptsCommonShapes() {
+        let cases: [(input: String, expected: (String, String))] = [
+            ("anthropics/claude-code", ("anthropics", "claude-code")),
+            ("https://github.com/anthropics/claude-code", ("anthropics", "claude-code")),
+            ("https://github.com/anthropics/claude-code.git", ("anthropics", "claude-code")),
+            ("https://github.com/anthropics/claude-code/pull/123", ("anthropics", "claude-code")),
+            ("github.com/anthropics/claude-code", ("anthropics", "claude-code")),
+            ("git@github.com:anthropics/claude-code.git", ("anthropics", "claude-code")),
+            ("  anthropics/claude-code  ", ("anthropics", "claude-code")),
+            ("https://github.com/anthropics/claude-code?tab=readme", ("anthropics", "claude-code")),
+        ]
+        for (input, expected) in cases {
+            let parsed = GitHubReferenceProvider.parseRepoIdentifier(input)
+            XCTAssertNotNil(parsed, "Failed to parse: \(input)")
+            XCTAssertEqual(parsed?.owner, expected.0, "Wrong owner for: \(input)")
+            XCTAssertEqual(parsed?.name, expected.1, "Wrong name for: \(input)")
+        }
+    }
+
+    func testGitHubParseRepoIdentifierRejectsGarbage() {
+        for input in ["", "   ", "not a repo", "owner", "/", "/owner/name", " /name"] {
+            XCTAssertNil(
+                GitHubReferenceProvider.parseRepoIdentifier(input),
+                "Should reject: \(input)"
+            )
+        }
+    }
+
+    func testGitHubProviderDecodesPRRows() {
+        let json = """
+        [
+          {
+            "number": 99,
+            "title": "Refactor session list",
+            "url": "https://github.com/example/repo/pull/99",
+            "updatedAt": "2026-04-30T12:34:56Z",
+            "author": { "login": "bob" },
+            "isDraft": false
+          }
+        ]
+        """
+
+        let provider = GitHubReferenceProvider()
+        let items = provider.decodeRows(json, flavor: "pr")
+
+        XCTAssertEqual(items.count, 1)
+        XCTAssertEqual(items[0].id, "pr-99")
+        XCTAssertEqual(items[0].url.absoluteString, "https://github.com/example/repo/pull/99")
+    }
+
     func testGhosttyIntegrationCreateAndFocus() async throws {
         guard ProcessInfo.processInfo.environment["RUN_GHOSTTY_INTEGRATION"] == "1" else {
             throw XCTSkip("Set RUN_GHOSTTY_INTEGRATION=1 to create and focus a real Ghostty window.")

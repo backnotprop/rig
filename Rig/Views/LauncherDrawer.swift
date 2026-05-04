@@ -57,8 +57,14 @@ struct LauncherDrawer: View {
 
     @EnvironmentObject private var store: ConfigStore
     @State private var prompt: String = ""
-    @State private var isLibraryOpen: Bool = false
+    /// Which auxiliary panel is open beneath the action row, if any.
+    /// `"library"` for saved prompts, `provider.id` (e.g. `"github"`) for any
+    /// reference provider. Only one panel is open at a time so we don't blow
+    /// the drawer's vertical budget.
+    @State private var openPanelID: String? = nil
     @FocusState private var isPromptFocused: Bool
+
+    private static let libraryPanelID = "library"
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -110,23 +116,44 @@ struct LauncherDrawer: View {
                         ? "No saved prompts — add some in Settings"
                         : "Saved prompts",
                     systemImage: "quote.bubble",
-                    isActive: isLibraryOpen,
-                    action: {
-                        withAnimation(.spring(response: 0.32, dampingFraction: 0.82)) {
-                            isLibraryOpen.toggle()
-                        }
-                    }
+                    isActive: openPanelID == Self.libraryPanelID,
+                    action: { togglePanel(Self.libraryPanelID) }
                 )
                 .disabled(store.config.prompts.isEmpty)
                 .opacity(store.config.prompts.isEmpty ? 0.4 : 1.0)
+
+                ForEach(ReferenceRegistry.providers, id: \.id) { provider in
+                    DrawerActionButton(
+                        tooltip: provider.displayName,
+                        assetName: provider.iconAssetName,
+                        isActive: openPanelID == provider.id,
+                        action: { togglePanel(provider.id) }
+                    )
+                }
             }
 
-            if isLibraryOpen && !store.config.prompts.isEmpty {
+            if openPanelID == Self.libraryPanelID && !store.config.prompts.isEmpty {
                 PromptDockView(prompts: store.displayPrompts) { selected in
                     prompt = selected.body
                     store.recordPromptUse(id: selected.id)
                     isPromptFocused = true
                 }
+                .transition(
+                    .asymmetric(
+                        insertion: .move(edge: .top).combined(with: .opacity),
+                        removal: .opacity
+                    )
+                )
+            }
+
+            if let panelID = openPanelID,
+                let provider = ReferenceRegistry.providers.first(where: { $0.id == panelID })
+            {
+                ReferencesPanel(
+                    provider: provider,
+                    projectPath: store.selectedProject?.path,
+                    onPick: { url in appendToPrompt(url) }
+                )
                 .transition(
                     .asymmetric(
                         insertion: .move(edge: .top).combined(with: .opacity),
@@ -146,21 +173,57 @@ struct LauncherDrawer: View {
         )
         .onAppear { isPromptFocused = true }
     }
+
+    private func togglePanel(_ id: String) {
+        withAnimation(.spring(response: 0.32, dampingFraction: 0.82)) {
+            openPanelID = (openPanelID == id) ? nil : id
+        }
+    }
+
+    /// Appends a reference URL to the prompt textfield. Inserts a leading
+    /// space if the existing prompt is non-empty and doesn't already end in
+    /// whitespace, so multiple consecutive picks read as a list.
+    private func appendToPrompt(_ url: String) {
+        if prompt.isEmpty {
+            prompt = url
+        } else if let last = prompt.last, last.isWhitespace {
+            prompt += url
+        } else {
+            prompt += " " + url
+        }
+    }
 }
 
 private struct DrawerActionButton: View {
+    enum IconKind {
+        case systemImage(String)
+        case asset(String)
+    }
+
     let tooltip: String
-    let systemImage: String
+    let icon: IconKind
     var isActive: Bool = false
     let action: () -> Void
+
+    init(tooltip: String, systemImage: String, isActive: Bool = false, action: @escaping () -> Void) {
+        self.tooltip = tooltip
+        self.icon = .systemImage(systemImage)
+        self.isActive = isActive
+        self.action = action
+    }
+
+    init(tooltip: String, assetName: String, isActive: Bool = false, action: @escaping () -> Void) {
+        self.tooltip = tooltip
+        self.icon = .asset(assetName)
+        self.isActive = isActive
+        self.action = action
+    }
 
     @State private var isHovered = false
 
     var body: some View {
         Button(action: action) {
-            Image(systemName: systemImage)
-                .font(.system(size: 12, weight: .semibold))
-                .foregroundStyle(.primary)
+            iconView
                 .frame(width: 32, height: 28)
                 .background(
                     RoundedRectangle(cornerRadius: 6, style: .continuous)
@@ -173,6 +236,23 @@ private struct DrawerActionButton: View {
         .onHover { isHovered = $0 }
         .animation(.easeInOut(duration: 0.12), value: isHovered)
         .animation(.easeInOut(duration: 0.12), value: isActive)
+    }
+
+    @ViewBuilder
+    private var iconView: some View {
+        switch icon {
+        case .systemImage(let name):
+            Image(systemName: name)
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(.primary)
+        case .asset(let name):
+            Image(name)
+                .resizable()
+                .renderingMode(.template)
+                .aspectRatio(contentMode: .fit)
+                .foregroundStyle(.primary)
+                .frame(width: 14, height: 14)
+        }
     }
 
     private var backgroundOpacity: Double {
