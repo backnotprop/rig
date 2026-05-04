@@ -3,7 +3,8 @@ import SwiftUI
 struct LauncherHarness: Identifiable, Equatable {
     let id: String
     let label: String
-    let command: String
+    var command: String
+    var enabled: Bool = true
     let assetName: String
     let background: Color
     var innerDisc: Color? = nil

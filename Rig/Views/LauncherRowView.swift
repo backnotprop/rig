@@ -133,7 +133,7 @@ struct LauncherRowView: View {
     }
 }
 
-private struct LauncherIconView: View {
+struct LauncherIconView: View {
     let harness: LauncherHarness
     let size: CGFloat
 

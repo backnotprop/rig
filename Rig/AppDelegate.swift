@@ -29,9 +29,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         store: SessionStore()
     )
     let projectsViewModel = ProjectsViewModel()
+    let harnessSettingsViewModel = HarnessSettingsViewModel()
 
     private var panel: RigPanel?
     private var autoHide: RigAutoHideController?
+    private var settingsWindow: NSWindow?
 
     nonisolated func applicationDidFinishLaunching(_ notification: Notification) {
         MainActor.assumeIsolated {
@@ -98,6 +100,33 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
 
         self.panel = panel
+    }
+
+    func presentSettingsWindow() {
+        if let settingsWindow {
+            settingsWindow.makeKeyAndOrderFront(nil)
+            NSApp.activate(ignoringOtherApps: true)
+            return
+        }
+
+        let view = SettingsView()
+            .environmentObject(harnessSettingsViewModel)
+
+        let window = NSWindow(
+            contentRect: NSRect(x: 0, y: 0, width: 700, height: 500),
+            styleMask: [.titled, .fullSizeContentView, .closable, .miniaturizable],
+            backing: .buffered,
+            defer: false
+        )
+        window.title = "Rig Settings"
+        window.titleVisibility = .visible
+        window.toolbarStyle = .unified
+        window.contentView = NSHostingView(rootView: view)
+        window.isReleasedWhenClosed = false
+        window.center()
+        window.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
+        self.settingsWindow = window
     }
 
     private func positionTrafficLights(in window: NSWindow) {
