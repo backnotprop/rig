@@ -32,6 +32,7 @@
 		B0000000000000000000001B /* LauncherDrawer.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000011D /* LauncherDrawer.swift */; };
 		B0000000000000000000001C /* SavedPrompt.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000011E /* SavedPrompt.swift */; };
 		B0000000000000000000001D /* PromptsSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000011F /* PromptsSettingsView.swift */; };
+		B0000000000000000000001E /* GeneralSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000120 /* GeneralSettingsView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -74,6 +75,7 @@
 		A0000000000000000000011D /* LauncherDrawer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LauncherDrawer.swift; sourceTree = "<group>"; };
 		A0000000000000000000011E /* SavedPrompt.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SavedPrompt.swift; sourceTree = "<group>"; };
 		A0000000000000000000011F /* PromptsSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PromptsSettingsView.swift; sourceTree = "<group>"; };
+		A00000000000000000000120 /* GeneralSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeneralSettingsView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -181,6 +183,7 @@
 				A0000000000000000000011B /* ProjectsSettingsView.swift */,
 				A0000000000000000000011D /* LauncherDrawer.swift */,
 				A0000000000000000000011F /* PromptsSettingsView.swift */,
+				A00000000000000000000120 /* GeneralSettingsView.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -312,6 +315,7 @@
 				B0000000000000000000001B /* LauncherDrawer.swift in Sources */,
 				B0000000000000000000001C /* SavedPrompt.swift in Sources */,
 				B0000000000000000000001D /* PromptsSettingsView.swift in Sources */,
+				B0000000000000000000001E /* GeneralSettingsView.swift in Sources */,
 				B00000000000000000000003 /* ContentView.swift in Sources */,
 				B00000000000000000000004 /* SessionRowView.swift in Sources */,
 				B0000000000000000000000E /* LauncherRowView.swift in Sources */,

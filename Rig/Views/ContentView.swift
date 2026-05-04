@@ -95,6 +95,24 @@ struct ContentView: View {
         }
     }
 
+    private func toggleDrawer(for harness: Harness) {
+        withAnimation(.spring(response: 0.32, dampingFraction: 0.82)) {
+            expandedHarnessID = (expandedHarnessID == harness.id) ? nil : harness.id
+        }
+    }
+
+    /// Routes a click to either an immediate launch or the prompt drawer based
+    /// on the user's `defaultLaunchMode` preference. Primary click runs the
+    /// default action; secondary (right-click / two-finger) runs the other one.
+    private func handleClick(_ harness: Harness, isPrimary: Bool) {
+        let useLaunch = (store.config.preferences.defaultLaunchMode == .launch) == isPrimary
+        if useLaunch {
+            launch(harness, bringToFront: true)
+        } else {
+            toggleDrawer(for: harness)
+        }
+    }
+
     private var settingsButton: some View {
         Button {
             appDelegate.presentSettingsWindow()
@@ -118,15 +136,8 @@ struct ContentView: View {
                 LauncherRowView(
                     harnesses: store.enabledHarnesses,
                     isDisabled: viewModel.isCreatingSession,
-                    onTap: { harness in
-                        launch(harness, bringToFront: true)
-                    },
-                    onSecondaryTap: { harness in
-                        withAnimation(.spring(response: 0.32, dampingFraction: 0.82)) {
-                            expandedHarnessID =
-                                (expandedHarnessID == harness.id) ? nil : harness.id
-                        }
-                    }
+                    onTap: { harness in handleClick(harness, isPrimary: true) },
+                    onSecondaryTap: { harness in handleClick(harness, isPrimary: false) }
                 )
 
                 ProjectSelectorView()
