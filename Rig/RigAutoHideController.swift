@@ -7,8 +7,11 @@ final class RigAutoHideController {
     private var triggerPanel: NSPanel?
     private var hideWorkItem: DispatchWorkItem?
     private var revealedFrame: NSRect = .zero
+    private var tuckedFrame: NSRect = .zero
     private var hiddenFrame: NSRect = .zero
     private(set) var isRevealed = true
+    private(set) var isTucked = false
+    private let peekWidth: CGFloat = 40
     /// True between willStartLiveResize and didEndLiveResize. Suppresses every
     /// hide path so the panel can't slide away under the user's cursor while
     /// they're actively dragging the edge.
@@ -73,10 +76,12 @@ final class RigAutoHideController {
             width: panelWidth,
             height: screenFrame.height
         )
-        // Why -200: belt-and-suspenders past macOS's off-screen clamp. RigPanel
-        // overrides constrainFrameRect to disable the clamp, but the extra buffer
-        // also protects against any residual clamping on Spaces / multi-display
-        // edge cases where the override may not run.
+        tuckedFrame = NSRect(
+            x: screenFrame.minX - panelWidth + peekWidth,
+            y: screenFrame.minY,
+            width: panelWidth,
+            height: screenFrame.height
+        )
         hiddenFrame = NSRect(
             x: screenFrame.minX - panelWidth - 200,
             y: screenFrame.minY,
@@ -103,8 +108,22 @@ final class RigAutoHideController {
             existing.bottomAnchor.constraint(equalTo: container.bottomAnchor),
         ])
 
-        container.onMouseEntered = { [weak self] in self?.reveal() }
-        container.onMouseExited = { [weak self] in self?.scheduleHide() }
+        container.onMouseEntered = { [weak self] in
+            guard let self else { return }
+            // When tucked, only a click reveals — hover is ignored so the
+            // user's cursor position after switching sessions doesn't
+            // accidentally re-open the sidebar.
+            if !self.isTucked { self.reveal() }
+        }
+        container.onMouseExited = { [weak self] in
+            guard let self else { return }
+            // Don't override the tuck timer with the shorter grace period.
+            if !self.isTucked { self.scheduleHide() }
+        }
+        container.onMouseDown = { [weak self] in
+            guard let self, self.isTucked else { return }
+            self.reveal()
+        }
 
         panel.contentView = container
     }
@@ -186,6 +205,7 @@ final class RigAutoHideController {
         cancelScheduledReveal()
         guard !isRevealed else { return }
         isRevealed = true
+        isTucked = false
         if !panel.isVisible {
             panel.setFrame(hiddenFrame, display: false)
             panel.orderFrontRegardless()
@@ -194,6 +214,24 @@ final class RigAutoHideController {
             rigPanel.customResizeDuration = animationDuration
         }
         panel.setFrame(revealedFrame, display: true, animate: true)
+    }
+
+    /// Slide Rig mostly off-screen, leaving only `peekWidth` visible.
+    /// Used after switching sessions so Ghostty gets the full screen and
+    /// Rig is just a small grab-tab on the left edge. If the user doesn't
+    /// click the tab within a few seconds, it slides fully off.
+    func tuck() {
+        cancelHide()
+        cancelScheduledReveal()
+        isTucked = true
+        isRevealed = false
+        if let rigPanel = panel as? RigPanel {
+            rigPanel.customResizeDuration = 0.25
+        }
+        panel.setFrame(tuckedFrame, display: true, animate: true)
+
+        // If user doesn't click the peek within 2.5s, hide completely.
+        scheduleHide(after: 2.5)
     }
 
     private func scheduleHide(after delay: TimeInterval? = nil) {
@@ -239,14 +277,15 @@ final class RigAutoHideController {
     }
 
     private func hideNow() {
-        guard isRevealed else { return }
+        guard isRevealed || isTucked else { return }
         isRevealed = false
+        isTucked = false
         if let rigPanel = panel as? RigPanel {
             rigPanel.customResizeDuration = animationDuration
         }
         panel.setFrame(hiddenFrame, display: true, animate: true)
         DispatchQueue.main.asyncAfter(deadline: .now() + animationDuration + 0.02) { [weak self] in
-            guard let self, !self.isRevealed else { return }
+            guard let self, !self.isRevealed, !self.isTucked else { return }
             self.panel.orderOut(nil)
         }
     }
@@ -255,7 +294,16 @@ final class RigAutoHideController {
 private final class AutoHideContainerView: NSView {
     var onMouseEntered: (() -> Void)?
     var onMouseExited: (() -> Void)?
+    var onMouseDown: (() -> Void)?
     private var trackingArea: NSTrackingArea?
+
+    override func mouseDown(with event: NSEvent) {
+        if let onMouseDown {
+            onMouseDown()
+        } else {
+            super.mouseDown(with: event)
+        }
+    }
 
     override func updateTrackingAreas() {
         super.updateTrackingAreas()

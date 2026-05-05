@@ -12,6 +12,8 @@ final class SessionListViewModel: ObservableObject {
     private let homeDirectory: String
     let spaceSwitcher = SpaceSwitcher()
     var instantSpaceSwitching = true
+    /// Called after a session switch to tuck the sidebar. Set by AppDelegate.
+    var onSessionSwitched: (() -> Void)?
     private var nextSessionOrdinal = 1
     private var hasStarted = false
     private var focusTask: Task<Void, Never>?
@@ -93,10 +95,10 @@ final class SessionListViewModel: ObservableObject {
 
         selectedSessionID = session.id
 
-        let didSwitch = instantSpaceSwitching && session.cgWindowID != 0
-        if didSwitch {
+        if instantSpaceSwitching && session.cgWindowID != 0 {
+            onSessionSwitched?()
             spaceSwitcher.switchToSpaceOf(windowID: session.cgWindowID)
-            try? await Task.sleep(for: .milliseconds(50))
+            return
         }
 
         do {
@@ -115,13 +117,6 @@ final class SessionListViewModel: ObservableObject {
             return
         } catch {
             lastError = error.localizedDescription
-        }
-
-        // Restore panel level AFTER focus completes so Rig stays on top
-        // through the entire Space-switch + AppleScript-focus sequence.
-        if didSwitch {
-            try? await Task.sleep(for: .milliseconds(100))
-            spaceSwitcher.restorePanel()
         }
     }
 

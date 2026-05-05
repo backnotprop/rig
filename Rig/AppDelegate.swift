@@ -90,16 +90,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
         panel.becomesKeyOnlyIfNeeded = false
         panel.worksWhenModal = true
         panel.hidesOnDeactivate = false
-        panel.level = .floating
+        panel.level = .modalPanel
         panel.collectionBehavior = [
             .canJoinAllSpaces,
             .fullScreenAuxiliary,
-            .stationary,
         ]
 
         autoHide = RigAutoHideController(panel: panel)
         panel.orderFrontRegardless()
-        viewModel.spaceSwitcher.floatingPanel = panel
+        viewModel.spaceSwitcher.rigPanel = panel
+        viewModel.onSessionSwitched = { [weak self] in
+            self?.autoHide?.tuck()
+        }
+
+
 
         DispatchQueue.main.async { [weak self] in
             self?.positionTrafficLights(in: panel)

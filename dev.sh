@@ -24,6 +24,9 @@ if ! security find-identity -v -p codesigning 2>/dev/null | grep -q "$SIGN_IDENT
     exit 1
 fi
 
+echo "Cleaning..."
+rm -rf "$DERIVED_DATA"
+
 echo "Building Rig (signed with '$SIGN_IDENTITY')..."
 xcodebuild \
     -project "$PROJECT_DIR/Rig.xcodeproj" \
