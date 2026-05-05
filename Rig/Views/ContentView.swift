@@ -42,7 +42,13 @@ struct ContentView: View {
         .focusable()
         .focusEffectDisabled()
         .focused($isListFocused)
-        .onAppear { isListFocused = true }
+        .onAppear {
+            isListFocused = true
+            viewModel.instantSpaceSwitching = store.config.preferences.instantSpaceSwitching
+        }
+        .onChange(of: store.config.preferences.instantSpaceSwitching) { _, newValue in
+            viewModel.instantSpaceSwitching = newValue
+        }
         .onMoveCommand { direction in
             viewModel.moveSelection(direction)
         }

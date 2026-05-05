@@ -24,6 +24,20 @@ struct GeneralSettingsView: View {
                             .foregroundStyle(.secondary)
                     }
                 }
+
+                card {
+                    VStack(alignment: .leading, spacing: 10) {
+                        Toggle(isOn: $store.config.preferences.instantSpaceSwitching) {
+                            Text("Instant Space switching")
+                                .font(.headline)
+                        }
+                        .toggleStyle(.switch)
+
+                        Text("When focusing a session on a different Space, switch instantly instead of the default macOS slide animation. Requires Accessibility permission.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
             }
             .padding(20)
             .frame(maxWidth: .infinity, alignment: .leading)

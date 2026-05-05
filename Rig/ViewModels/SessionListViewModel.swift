@@ -10,6 +10,8 @@ final class SessionListViewModel: ObservableObject {
 
     private let controller: GhosttyControlling
     private let homeDirectory: String
+    let spaceSwitcher = SpaceSwitcher()
+    var instantSpaceSwitching = true
     private var nextSessionOrdinal = 1
     private var hasStarted = false
     private var focusTask: Task<Void, Never>?
@@ -57,6 +59,13 @@ final class SessionListViewModel: ObservableObject {
             )
             nextSessionOrdinal = ordinal + 1
 
+            // Capture the macOS CGWindowID for the new Ghostty window. We
+            // use "newest window belonging to Ghostty's PID" which works
+            // because we just created it and nothing else runs in between.
+            let cgWID = SpaceSwitcher.ghosttyPID.flatMap {
+                SpaceSwitcher.newestWindowID(ownerPID: $0)
+            } ?? 0
+
             let session = GhosttySession(
                 id: UUID(),
                 label: label,
@@ -65,7 +74,8 @@ final class SessionListViewModel: ObservableObject {
                 ghosttyWindowId: createdSurface.windowId,
                 ghosttyTabId: createdSurface.tabId,
                 ghosttyTerminalId: createdSurface.terminalId,
-                isBackgrounded: !bringToFront
+                isBackgrounded: !bringToFront,
+                cgWindowID: cgWID
             )
 
             withAnimation(.snappy(duration: 0.22)) {
@@ -81,6 +91,15 @@ final class SessionListViewModel: ObservableObject {
         guard sessions.contains(where: { $0.id == session.id }) else { return }
 
         selectedSessionID = session.id
+
+        // If instant Space-switching is on and we have a CGWindowID, jump to
+        // the window's Space before asking Ghostty to focus. This avoids the
+        // slow default macOS slide animation.
+        if instantSpaceSwitching && session.cgWindowID != 0 {
+            spaceSwitcher.switchToSpaceOf(windowID: session.cgWindowID)
+            // Brief yield so the Space transition lands before we focus.
+            try? await Task.sleep(for: .milliseconds(50))
+        }
 
         do {
             try Task.checkCancellation()

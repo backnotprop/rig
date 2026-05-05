@@ -47,6 +47,7 @@ struct Preferences: Codable, Equatable {
     var selectedProjectID: UUID? = nil
     var promptSortOrder: PromptSortOrder = .lastUsed
     var defaultLaunchMode: LaunchMode = .launch
+    var instantSpaceSwitching: Bool = true
     /// User-picked reference scopes per provider id, most-recent-first, capped
     /// at 5. Detected scopes don't go in here — only ones the user explicitly
     /// chose, so this list is "places I've intentionally looked at."
@@ -55,7 +56,7 @@ struct Preferences: Codable, Equatable {
     private enum CodingKeys: String, CodingKey {
         case autohideRevealDelay, autohideAnimationDuration, autohideHideGracePeriod
         case autohideTriggerWidth, recentProjectIDs, selectedProjectID, promptSortOrder
-        case defaultLaunchMode, recentScopesByProvider
+        case defaultLaunchMode, instantSpaceSwitching, recentScopesByProvider
     }
 
     init() {}
@@ -73,6 +74,7 @@ struct Preferences: Codable, Equatable {
         self.selectedProjectID = try c.decodeIfPresent(UUID.self, forKey: .selectedProjectID)
         self.promptSortOrder = try c.decodeIfPresent(PromptSortOrder.self, forKey: .promptSortOrder) ?? .lastUsed
         self.defaultLaunchMode = try c.decodeIfPresent(LaunchMode.self, forKey: .defaultLaunchMode) ?? .launch
+        self.instantSpaceSwitching = try c.decodeIfPresent(Bool.self, forKey: .instantSpaceSwitching) ?? true
         self.recentScopesByProvider = try c.decodeIfPresent([String: [ReferenceScope]].self, forKey: .recentScopesByProvider) ?? [:]
     }
 }

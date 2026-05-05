@@ -39,6 +39,8 @@
 		B00000000000000000000021 /* GitHubReferenceProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000123 /* GitHubReferenceProvider.swift */; };
 		B00000000000000000000022 /* ReferencesPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000124 /* ReferencesPanel.swift */; };
 		B00000000000000000000023 /* PromptComposer.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000125 /* PromptComposer.swift */; };
+		B00000000000000000000027 /* SpaceSwitching.c in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000012B /* SpaceSwitching.c */; };
+		B00000000000000000000028 /* SpaceSwitcher.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000012C /* SpaceSwitcher.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -88,6 +90,10 @@
 		A00000000000000000000123 /* GitHubReferenceProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GitHubReferenceProvider.swift; sourceTree = "<group>"; };
 		A00000000000000000000124 /* ReferencesPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReferencesPanel.swift; sourceTree = "<group>"; };
 		A00000000000000000000125 /* PromptComposer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PromptComposer.swift; sourceTree = "<group>"; };
+		A0000000000000000000012A /* SpaceSwitching.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SpaceSwitching.h; sourceTree = "<group>"; };
+		A0000000000000000000012B /* SpaceSwitching.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = SpaceSwitching.c; sourceTree = "<group>"; };
+		A0000000000000000000012C /* SpaceSwitcher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpaceSwitcher.swift; sourceTree = "<group>"; };
+		A0000000000000000000012D /* Rig-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "Rig-Bridging-Header.h"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -136,10 +142,12 @@
 				A00000000000000000000006 /* Models */,
 				A00000000000000000000007 /* Persistence */,
 				A0000000000000000000000B /* References */,
+				A0000000000000000000000C /* SpaceSwitching */,
 				A00000000000000000000008 /* ViewModels */,
 				A00000000000000000000009 /* Views */,
 				A0000000000000000000010B /* Info.plist */,
 				A0000000000000000000010D /* Rig.entitlements */,
+				A0000000000000000000012D /* Rig-Bridging-Header.h */,
 				A00000000000000000000126 /* riglogocut1.avif */,
 				A00000000000000000000111 /* Assets.xcassets */,
 			);
@@ -154,6 +162,16 @@
 				A00000000000000000000122 /* ShellRunner.swift */,
 			);
 			path = Controllers;
+			sourceTree = "<group>";
+		};
+		A0000000000000000000000C /* SpaceSwitching */ = {
+			isa = PBXGroup;
+			children = (
+				A0000000000000000000012A /* SpaceSwitching.h */,
+				A0000000000000000000012B /* SpaceSwitching.c */,
+				A0000000000000000000012C /* SpaceSwitcher.swift */,
+			);
+			path = SpaceSwitching;
 			sourceTree = "<group>";
 		};
 		A0000000000000000000000B /* References */ = {
@@ -348,6 +366,8 @@
 				B00000000000000000000021 /* GitHubReferenceProvider.swift in Sources */,
 				B00000000000000000000022 /* ReferencesPanel.swift in Sources */,
 				B00000000000000000000023 /* PromptComposer.swift in Sources */,
+				B00000000000000000000027 /* SpaceSwitching.c in Sources */,
+				B00000000000000000000028 /* SpaceSwitcher.swift in Sources */,
 				B00000000000000000000003 /* ContentView.swift in Sources */,
 				B00000000000000000000004 /* SessionRowView.swift in Sources */,
 				B0000000000000000000000E /* LauncherRowView.swift in Sources */,
@@ -513,6 +533,7 @@
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = macosx;
 				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_OBJC_BRIDGING_HEADER = "Rig/Rig-Bridging-Header.h";
 				SWIFT_VERSION = 6.0;
 			};
 			name = Debug;
@@ -541,6 +562,7 @@
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = macosx;
 				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_OBJC_BRIDGING_HEADER = "Rig/Rig-Bridging-Header.h";
 				SWIFT_VERSION = 6.0;
 			};
 			name = Release;

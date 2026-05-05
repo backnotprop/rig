@@ -14,4 +14,8 @@ struct GhosttySession: Identifiable, Equatable {
     /// (orderOut'd via AppleScript). Flipped true on background launch,
     /// false when the user clicks the session to bring it back.
     var isBackgrounded: Bool = false
+    /// The macOS-level window ID (kCGWindowNumber) captured at creation time.
+    /// Used by SpaceSwitcher to find which Space the window lives on. Zero
+    /// means we couldn't capture it (Ghostty not running, timing race, etc.).
+    var cgWindowID: CGWindowID = 0
 }
