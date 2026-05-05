@@ -246,6 +246,27 @@ final class AppleScriptGhosttyController: GhosttyControlling {
         return try decoder.decode(CreatedGhosttySurface.self, from: Data(json.utf8))
     }
 
+    func closeWindow(windowId: String) async throws {
+        try Task.checkCancellation()
+        _ = try? run(script: """
+        tell application "Ghostty"
+            set winCount to 0
+            try
+                set winCount to count of windows
+            end try
+            repeat with winIdx from 1 to winCount
+                try
+                    set winRef to window winIdx
+                    if (id of winRef as text) is \(Self.appleScriptLiteral(windowId)) then
+                        close window winRef
+                        exit repeat
+                    end if
+                end try
+            end repeat
+        end tell
+        """)
+    }
+
     private func run(script source: String) throws -> String {
         var errorInfo: NSDictionary?
         guard let script = NSAppleScript(source: source) else {

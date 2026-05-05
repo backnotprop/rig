@@ -17,4 +17,6 @@ protocol GhosttyControlling: Sendable {
         tabId: String,
         terminalId: String
     ) async throws -> CreatedGhosttySurface
+
+    func closeWindow(windowId: String) async throws
 }

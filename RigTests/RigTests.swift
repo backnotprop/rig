@@ -352,4 +352,6 @@ private actor FakeGhosttyController: GhosttyControlling {
             workingDirectory: "/Users/tester"
         )
     }
+
+    func closeWindow(windowId: String) async throws {}
 }

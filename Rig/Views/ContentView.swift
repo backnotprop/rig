@@ -250,6 +250,10 @@ struct ContentView: View {
             Button("Remove") {
                 viewModel.remove(session)
             }
+            Divider()
+            Button("Remove All") {
+                viewModel.removeAll()
+            }
         }
         .transition(
             .asymmetric(
@@ -322,4 +326,6 @@ private struct PreviewGhosttyController: GhosttyControlling {
             workingDirectory: FileManager.default.homeDirectoryForCurrentUser.path
         )
     }
+
+    func closeWindow(windowId: String) async throws {}
 }

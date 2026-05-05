@@ -150,6 +150,19 @@ final class SessionListViewModel: ObservableObject {
         }
     }
 
+    func removeAll() {
+        let toClose = sessions
+        withAnimation(.snappy(duration: 0.18)) {
+            sessions.removeAll()
+            selectedSessionID = nil
+        }
+        Task {
+            for session in toClose {
+                try? await controller.closeWindow(windowId: session.ghosttyWindowId)
+            }
+        }
+    }
+
     func removeSelected() {
         guard
             let selectedSessionID,
