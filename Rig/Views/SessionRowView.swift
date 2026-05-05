@@ -10,7 +10,15 @@ struct SessionRowView: View {
             Text(session.label)
                 .font(.system(size: 13, weight: isSelected ? .semibold : .regular))
                 .lineLimit(1)
-                .foregroundStyle(.primary)
+                .foregroundStyle(session.isBackgrounded ? .secondary : .primary)
+                .italic(session.isBackgrounded)
+
+            if session.isBackgrounded {
+                Image(systemName: "eye.slash")
+                    .font(.system(size: 10, weight: .medium))
+                    .foregroundStyle(.tertiary)
+                    .help("Backgrounded — click to bring forward")
+            }
 
             Spacer(minLength: 0)
         }

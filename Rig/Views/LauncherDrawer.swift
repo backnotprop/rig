@@ -116,11 +116,56 @@ struct LauncherDrawer: View {
                     systemImage: "play.fill",
                     action: { onRun(composer.composedString()) }
                 )
-                DrawerActionButton(
-                    tooltip: "Run in background",
-                    systemImage: "arrow.up.right.and.arrow.down.left",
-                    action: { onBackground(composer.composedString()) }
-                )
+                // TODO(backgrounding): Re-enable when we ship a real "hide
+                // window" path. The whole pipeline below the button still
+                // works — `onBackground` plumbs `bringToFront: false` through
+                // SessionListViewModel into AppleScriptGhosttyController,
+                // which already attempts `set visible/miniaturized of window`
+                // with try/fallback. The session row visual (eye-slash, dim)
+                // also still works. We're hiding *only* the button so users
+                // don't trigger a half-working flow.
+                //
+                // Why it doesn't work today: Ghostty's AppleScript dictionary
+                // exposes only `id`, `name`, `selected tab` and the commands
+                // `activate window` / `close window`. No visibility, no
+                // miniaturized, no bounds. So our hide attempt silently
+                // no-ops and the window opens visibly.
+                //
+                // Cross-process private APIs (CGSOrderWindow with
+                // kCGSOrderOut) are silently rejected by the WindowServer
+                // unless you own the window — verified via research and
+                // matches yabai/Hammerspoon's experience. Target-process
+                // injection is blocked because Ghostty's signature has
+                // library validation enforced (no
+                // com.apple.security.cs.disable-library-validation in its
+                // entitlements).
+                //
+                // Three real paths to ship this:
+                //
+                //   1. AX-based "park" — give Rig Accessibility permission,
+                //      use AXUIElementSetAttribute(kAXPositionAttribute) to
+                //      move the window to (-30000, -30000). Invisible day-
+                //      to-day; leaks in Mission Control. Easiest to ship.
+                //
+                //   2. Ghostty exposes `visible` / `miniaturized` / `bounds`
+                //      in their sdef. Filed as a feature request; if merged,
+                //      the hideClause we already wrote in
+                //      AppleScriptGhosttyController works natively. Cleanest.
+                //
+                //   3. Embed libghostty (per cmux's pattern) and own the
+                //      window ourselves — then NSWindow.orderOut: just
+                //      works. True hide, no Mission Control leak. But Rig
+                //      becomes a terminal app and we'd reimplement Ghostty's
+                //      tabs/splits/keybinds. ~3-4 weeks of work.
+                //
+                // To bring the button back, just delete this comment and
+                // restore the DrawerActionButton call below.
+                //
+                // DrawerActionButton(
+                //     tooltip: "Run in background",
+                //     systemImage: "arrow.up.right.and.arrow.down.left",
+                //     action: { onBackground(composer.composedString()) }
+                // )
                 DrawerActionButton(
                     tooltip: store.config.prompts.isEmpty
                         ? "No saved prompts — add some in Settings"

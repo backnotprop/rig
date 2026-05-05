@@ -59,6 +59,20 @@ final class AppleScriptGhosttyController: GhosttyControlling {
             ? "select tab targetTab\nfocus targetTerm"
             : ""
 
+        // For backgrounded launches we hide the freshly-created window so it
+        // never flashes on screen. Try `visible` first (the standard NSWindow
+        // property); if Ghostty's dictionary doesn't accept it, fall back to
+        // `miniaturized` which every NSWindow-based app honors.
+        let hideClause = bringToFront ? "" : """
+        try
+            set visible of targetWin to false
+        on error
+            try
+                set miniaturized of targetWin to true
+            end try
+        end try
+        """
+
         let json = try run(script: """
         \(Self.jsonHandlers)
 
@@ -123,6 +137,9 @@ final class AppleScriptGhosttyController: GhosttyControlling {
             -- entire activationClause is empty so the window is created without
             -- being focused.
             \(activationClause)
+
+            -- Hide the window for backgrounded launches. Empty for foreground.
+            \(hideClause)
 
             set output to "{"
             set output to output & "\\"windowId\\":" & my jsonString(id of targetWin)
@@ -200,6 +217,17 @@ final class AppleScriptGhosttyController: GhosttyControlling {
                 end try
             end repeat
             if targetTerm is missing value then error "Rig could not find the managed Ghostty terminal."
+
+            -- Un-hide first in case this session was backgrounded. Both
+            -- properties are tried because we may have used either path on
+            -- the way down (see hideClause in createWindow). Wrapped in `try`
+            -- so failures (e.g., property not supported) don't break focus.
+            try
+                set visible of targetWin to true
+            end try
+            try
+                set miniaturized of targetWin to false
+            end try
 
             select tab targetTab
             focus targetTerm

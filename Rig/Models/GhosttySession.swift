@@ -10,4 +10,8 @@ struct GhosttySession: Identifiable, Equatable {
     var ghosttyWindowId: String
     var ghosttyTabId: String
     var ghosttyTerminalId: String
+    /// Whether the corresponding Ghostty window is currently hidden
+    /// (orderOut'd via AppleScript). Flipped true on background launch,
+    /// false when the user clicks the session to bring it back.
+    var isBackgrounded: Bool = false
 }

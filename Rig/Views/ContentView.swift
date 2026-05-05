@@ -200,15 +200,6 @@ struct ContentView: View {
     private var emptyState: some View {
         Spacer()
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .overlay(alignment: .center) {
-                Image("Truck")
-                    .resizable()
-                    .aspectRatio(contentMode: .fit)
-                    .frame(width: 64, height: 64)
-                    .foregroundStyle(.tertiary)
-                    .opacity(0.6)
-                    .accessibilityHidden(true)
-            }
     }
 
     private var sessionList: some View {

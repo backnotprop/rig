@@ -23,6 +23,7 @@
 		B00000000000000000000017 /* RigConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000119 /* RigConfig.swift */; };
 		B00000000000000000000018 /* ConfigStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000011A /* ConfigStore.swift */; };
 		B0000000000000000000000F /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000111 /* Assets.xcassets */; };
+		B00000000000000000000024 /* riglogocut1.avif in Resources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000126 /* riglogocut1.avif */; };
 		B00000000000000000000010 /* Project.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000112 /* Project.swift */; };
 		B00000000000000000000012 /* ProjectSelectorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000114 /* ProjectSelectorView.swift */; };
 		B00000000000000000000014 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000116 /* SettingsView.swift */; };
@@ -63,6 +64,7 @@
 		A00000000000000000000108 /* AppleScriptGhosttyController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleScriptGhosttyController.swift; sourceTree = "<group>"; };
 		A0000000000000000000010A /* SessionListViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionListViewModel.swift; sourceTree = "<group>"; };
 		A0000000000000000000010B /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		A00000000000000000000126 /* riglogocut1.avif */ = {isa = PBXFileReference; lastKnownFileType = file; path = riglogocut1.avif; sourceTree = "<group>"; };
 		A0000000000000000000010C /* RigTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RigTests.swift; sourceTree = "<group>"; };
 		A0000000000000000000010D /* Rig.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Rig.entitlements; sourceTree = "<group>"; };
 		A0000000000000000000010E /* RigAutoHideController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RigAutoHideController.swift; sourceTree = "<group>"; };
@@ -138,6 +140,7 @@
 				A00000000000000000000009 /* Views */,
 				A0000000000000000000010B /* Info.plist */,
 				A0000000000000000000010D /* Rig.entitlements */,
+				A00000000000000000000126 /* riglogocut1.avif */,
 				A00000000000000000000111 /* Assets.xcassets */,
 			);
 			path = Rig;
@@ -301,6 +304,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				B0000000000000000000000F /* Assets.xcassets in Resources */,
+				B00000000000000000000024 /* riglogocut1.avif in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

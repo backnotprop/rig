@@ -11,9 +11,10 @@ struct Harness: Identifiable, Codable, Equatable {
     var tint: HexColor
     var iconInset: Double
     var flags: [String: FlagValue] = [:]
+    var promptStyle: PromptStyle = .positional
 
     private enum CodingKeys: String, CodingKey {
-        case id, label, command, enabled, icon, tint, iconInset, flags
+        case id, label, command, enabled, icon, tint, iconInset, flags, promptStyle
     }
 
     init(
@@ -24,7 +25,8 @@ struct Harness: Identifiable, Codable, Equatable {
         icon: HarnessIcon,
         tint: HexColor,
         iconInset: Double,
-        flags: [String: FlagValue] = [:]
+        flags: [String: FlagValue] = [:],
+        promptStyle: PromptStyle = .positional
     ) {
         self.id = id
         self.label = label
@@ -34,6 +36,7 @@ struct Harness: Identifiable, Codable, Equatable {
         self.tint = tint
         self.iconInset = iconInset
         self.flags = flags
+        self.promptStyle = promptStyle
     }
 
     init(from decoder: Decoder) throws {
@@ -45,8 +48,8 @@ struct Harness: Identifiable, Codable, Equatable {
         self.icon = try c.decode(HarnessIcon.self, forKey: .icon)
         self.tint = try c.decode(HexColor.self, forKey: .tint)
         self.iconInset = try c.decode(Double.self, forKey: .iconInset)
-        // flags is optional in old configs; default to empty.
         self.flags = (try? c.decode([String: FlagValue].self, forKey: .flags)) ?? [:]
+        self.promptStyle = (try? c.decode(PromptStyle.self, forKey: .promptStyle)) ?? .positional
     }
 }
 
@@ -201,7 +204,8 @@ extension Harness {
             enabled: true,
             icon: .builtin(name: "OpenCode"),
             tint: HexColor("#000000"),
-            iconInset: 0.24
+            iconInset: 0.24,
+            promptStyle: .flag("prompt")
         ),
     ]
 }

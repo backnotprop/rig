@@ -64,7 +64,8 @@ final class SessionListViewModel: ObservableObject {
                 projectID: projectID,
                 ghosttyWindowId: createdSurface.windowId,
                 ghosttyTabId: createdSurface.tabId,
-                ghosttyTerminalId: createdSurface.terminalId
+                ghosttyTerminalId: createdSurface.terminalId,
+                isBackgrounded: !bringToFront
             )
 
             withAnimation(.snappy(duration: 0.22)) {
@@ -89,6 +90,11 @@ final class SessionListViewModel: ObservableObject {
                 terminalId: session.ghosttyTerminalId
             )
             try Task.checkCancellation()
+            // Focus path un-hides the window in AppleScript; mirror that in
+            // our local model so the row stops showing the backgrounded cue.
+            if let idx = sessions.firstIndex(where: { $0.id == session.id }) {
+                sessions[idx].isBackgrounded = false
+            }
             lastError = nil
         } catch is CancellationError {
             return
