@@ -36,6 +36,15 @@ struct GeneralSettingsView: View {
                         Text("When focusing a session on a different Space, switch instantly instead of the default macOS slide animation. Requires Accessibility permission.")
                             .font(.caption)
                             .foregroundStyle(.secondary)
+
+                        Button {
+                            NSWorkspace.shared.open(
+                                URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility")!
+                            )
+                        } label: {
+                            Label("Open Accessibility Settings", systemImage: "lock.shield")
+                        }
+                        .controlSize(.small)
                     }
                 }
             }
