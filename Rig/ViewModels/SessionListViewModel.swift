@@ -59,9 +59,10 @@ final class SessionListViewModel: ObservableObject {
             )
             nextSessionOrdinal = ordinal + 1
 
-            // Capture the macOS CGWindowID for the new Ghostty window. We
-            // use "newest window belonging to Ghostty's PID" which works
-            // because we just created it and nothing else runs in between.
+            // Brief pause so the window compositor registers the new window
+            // before we try to capture its CGWindowID.
+            try? await Task.sleep(for: .milliseconds(150))
+
             let cgWID = SpaceSwitcher.ghosttyPID.flatMap {
                 SpaceSwitcher.newestWindowID(ownerPID: $0)
             } ?? 0
@@ -92,12 +93,9 @@ final class SessionListViewModel: ObservableObject {
 
         selectedSessionID = session.id
 
-        // If instant Space-switching is on and we have a CGWindowID, jump to
-        // the window's Space before asking Ghostty to focus. This avoids the
-        // slow default macOS slide animation.
-        if instantSpaceSwitching && session.cgWindowID != 0 {
+        let didSwitch = instantSpaceSwitching && session.cgWindowID != 0
+        if didSwitch {
             spaceSwitcher.switchToSpaceOf(windowID: session.cgWindowID)
-            // Brief yield so the Space transition lands before we focus.
             try? await Task.sleep(for: .milliseconds(50))
         }
 
@@ -109,8 +107,6 @@ final class SessionListViewModel: ObservableObject {
                 terminalId: session.ghosttyTerminalId
             )
             try Task.checkCancellation()
-            // Focus path un-hides the window in AppleScript; mirror that in
-            // our local model so the row stops showing the backgrounded cue.
             if let idx = sessions.firstIndex(where: { $0.id == session.id }) {
                 sessions[idx].isBackgrounded = false
             }
@@ -119,6 +115,13 @@ final class SessionListViewModel: ObservableObject {
             return
         } catch {
             lastError = error.localizedDescription
+        }
+
+        // Restore panel level AFTER focus completes so Rig stays on top
+        // through the entire Space-switch + AppleScript-focus sequence.
+        if didSwitch {
+            try? await Task.sleep(for: .milliseconds(100))
+            spaceSwitcher.restorePanel()
         }
     }
 

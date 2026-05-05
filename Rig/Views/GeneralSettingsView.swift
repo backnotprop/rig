@@ -33,16 +33,16 @@ struct GeneralSettingsView: View {
                         }
                         .toggleStyle(.switch)
 
-                        Text("When focusing a session on a different Space, switch instantly instead of the default macOS slide animation. Requires Accessibility permission.")
+                        Text("When focusing a session on a different Space, switch instantly instead of the default macOS slide animation. Requires Input Monitoring permission.")
                             .font(.caption)
                             .foregroundStyle(.secondary)
 
                         Button {
                             NSWorkspace.shared.open(
-                                URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility")!
+                                URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_ListenEvent")!
                             )
                         } label: {
-                            Label("Open Accessibility Settings", systemImage: "lock.shield")
+                            Label("Open Input Monitoring Settings", systemImage: "lock.shield")
                         }
                         .controlSize(.small)
                     }

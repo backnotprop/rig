@@ -99,6 +99,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
 
         autoHide = RigAutoHideController(panel: panel)
         panel.orderFrontRegardless()
+        viewModel.spaceSwitcher.floatingPanel = panel
 
         DispatchQueue.main.async { [weak self] in
             self?.positionTrafficLights(in: panel)

@@ -244,7 +244,10 @@ static bool should_block(const RigSpaceInfo *info, bool right) {
 // MARK: - Window → Space mapping
 
 int rig_space_index_for_window(CGWindowID windowID) {
-    if (!cgs_symbols_available() || &CGSCopySpacesForWindows == NULL) return -1;
+    if (!cgs_symbols_available() || &CGSCopySpacesForWindows == NULL) {
+        fprintf(stderr, "[RIG-SPACE] index_for_window: CGS symbols missing\n");
+        return -1;
+    }
 
     CGSConnectionID cid = CGSMainConnectionID();
     if (cid == 0) return -1;
@@ -327,8 +330,14 @@ bool rig_space_get_info(RigSpaceInfo *info) {
 
 bool rig_space_switch_to_index(unsigned int targetIndex) {
     RigSpaceInfo info;
-    if (!rig_space_get_info(&info)) return false;
-    if (info.spaceCount == 0) return false;
+    if (!rig_space_get_info(&info)) {
+        fprintf(stderr, "[RIG-SPACE] get_info failed\n");
+        return false;
+    }
+    if (info.spaceCount == 0) {
+        fprintf(stderr, "[RIG-SPACE] spaceCount is 0\n");
+        return false;
+    }
 
     if (targetIndex >= info.spaceCount) {
         targetIndex = info.spaceCount - 1;
@@ -336,16 +345,26 @@ bool rig_space_switch_to_index(unsigned int targetIndex) {
 
     unsigned int predicted;
     unsigned int cur = get_prediction(info.displayID, &predicted) ? predicted : info.currentIndex;
-    if (cur == targetIndex) return true;
+    if (cur == targetIndex) {
+        fprintf(stderr, "[RIG-SPACE] already on target space %u\n", targetIndex);
+        return true;
+    }
 
     bool right = targetIndex > cur;
     unsigned int steps = right ? (targetIndex - cur) : (cur - targetIndex);
     double velocity = gestureSpeed * steps;
 
+    fprintf(stderr, "[RIG-SPACE] switching from %u to %u (%u steps, %s, vel=%.0f)\n",
+            cur, targetIndex, steps, right ? "right" : "left", velocity);
+
     for (unsigned int i = 0; i < steps; i++) {
-        if (!perform_switch_gesture(right, velocity)) return false;
+        if (!perform_switch_gesture(right, velocity)) {
+            fprintf(stderr, "[RIG-SPACE] gesture post FAILED at step %u\n", i);
+            return false;
+        }
     }
 
+    fprintf(stderr, "[RIG-SPACE] switch posted OK\n");
     set_prediction(info.displayID, targetIndex);
     return true;
 }
