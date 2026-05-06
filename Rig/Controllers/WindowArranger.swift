@@ -23,6 +23,20 @@ enum WindowArranger {
         case fillScreen
     }
 
+    private enum SharedSpaceError: LocalizedError {
+        case ghosttyWindowUnavailable
+        case browserWindowUnavailable
+
+        var errorDescription: String? {
+            switch self {
+            case .ghosttyWindowUnavailable:
+                "Rig could not find that Ghostty window for split view."
+            case .browserWindowUnavailable:
+                "Rig opened the URL, but could not find the browser window to arrange."
+            }
+        }
+    }
+
     private struct TargetFrame {
         var x: CGFloat
         var y: CGFloat
@@ -103,6 +117,36 @@ enum WindowArranger {
         }
 
         try? await Task.sleep(for: .milliseconds(900))
+    }
+
+    static func openURLInSharedSpace(_ url: URL, beside session: GhosttySession) async throws {
+        guard let ghosttyWindow = await resolveWindow(for: session) else {
+            throw SharedSpaceError.ghosttyWindowUnavailable
+        }
+        guard let screen = NSScreen.main else { return }
+
+        let targetFrames = sideBySideFrames(count: 2, in: screen.visibleFrame)
+        let ghosttyFrame = targetFrames[0]
+        let browserFrame = targetFrames[1]
+
+        let enhancedUIRestore = disableEnhancedUserInterface()
+        defer {
+            restoreEnhancedUserInterface(enhancedUIRestore)
+        }
+
+        await prepare(window: ghosttyWindow, for: ghosttyFrame)
+        raise(ghosttyWindow)
+
+        guard let browserWindow = await openURLAndResolveBrowserWindow(url) else {
+            throw SharedSpaceError.browserWindowUnavailable
+        }
+
+        let currentGhosttyWindow = ManagedGhosttyWindowRegistry.window(for: session.id) ?? ghosttyWindow
+        await prepare(window: currentGhosttyWindow, for: ghosttyFrame)
+        await prepare(window: browserWindow, for: browserFrame)
+
+        raise(currentGhosttyWindow)
+        raise(browserWindow)
     }
 
     private static func captureWindows(for sessions: [GhosttySession]) async -> [(session: GhosttySession, window: AXUIElement)] {
@@ -222,6 +266,23 @@ enum WindowArranger {
         setSize(window, width: targetFrame.width, height: targetFrame.height)
     }
 
+    private static func prepare(window: AXUIElement, for targetFrame: TargetFrame) async {
+        setMiniaturized(window, false)
+        applyFrame(targetFrame, to: window)
+
+        if isFullScreen(window) {
+            _ = setFullScreen(window, false)
+            for delay in [140, 220, 280, 360] {
+                try? await Task.sleep(for: .milliseconds(delay))
+                applyFrame(targetFrame, to: window)
+            }
+        }
+
+        if !isFullScreen(window), isNormalWindow(window) {
+            applyFrame(targetFrame, to: window)
+        }
+    }
+
     // MARK: - Window identification
 
     private static func resolveWindow(for session: GhosttySession) async -> AXUIElement? {
@@ -318,6 +379,99 @@ enum WindowArranger {
         return "\"\(escaped)\""
     }
 
+    // MARK: - Browser companion window
+
+    private static func openURLAndResolveBrowserWindow(_ url: URL) async -> AXUIElement? {
+        let bundleID = defaultApplicationBundleIdentifier(for: url)
+        let existingWindowIDs = windowIDs(forApplicationWithBundleID: bundleID)
+
+        if let appURL = NSWorkspace.shared.urlForApplication(toOpen: url) {
+            let configuration = NSWorkspace.OpenConfiguration()
+            configuration.activates = true
+            NSWorkspace.shared.open(
+                [url],
+                withApplicationAt: appURL,
+                configuration: configuration
+            ) { _, _ in }
+        } else {
+            NSWorkspace.shared.open(url)
+        }
+
+        for delay in [120, 180, 240, 360, 500, 700, 900] {
+            try? await Task.sleep(for: .milliseconds(delay))
+            if let window = browserWindow(bundleID: bundleID, excluding: existingWindowIDs) {
+                return window
+            }
+        }
+
+        return nil
+    }
+
+    private static func defaultApplicationBundleIdentifier(for url: URL) -> String? {
+        guard let appURL = NSWorkspace.shared.urlForApplication(toOpen: url) else { return nil }
+        return Bundle(url: appURL)?.bundleIdentifier
+    }
+
+    private static func browserWindow(
+        bundleID: String?,
+        excluding existingWindowIDs: Set<CGWindowID>
+    ) -> AXUIElement? {
+        if let frontmost = NSWorkspace.shared.frontmostApplication,
+           frontmost.bundleIdentifier != Bundle.main.bundleIdentifier,
+           frontmost.bundleIdentifier != "com.mitchellh.ghostty",
+           bundleID == nil || frontmost.bundleIdentifier == bundleID,
+           let window = window(forApplicationPID: frontmost.processIdentifier, excluding: existingWindowIDs) {
+            return window
+        }
+
+        guard let bundleID,
+              let app = NSRunningApplication.runningApplications(withBundleIdentifier: bundleID).first
+        else { return nil }
+
+        return window(forApplicationPID: app.processIdentifier, excluding: existingWindowIDs)
+    }
+
+    private static func windowIDs(forApplicationWithBundleID bundleID: String?) -> Set<CGWindowID> {
+        guard let bundleID,
+              let app = NSRunningApplication.runningApplications(withBundleIdentifier: bundleID).first
+        else { return [] }
+
+        return Set(windows(forApplicationPID: app.processIdentifier).compactMap(ManagedGhosttyWindowRegistry.cgWindowID))
+    }
+
+    private static func window(forApplicationPID pid: pid_t, excluding existingWindowIDs: Set<CGWindowID>) -> AXUIElement? {
+        let appRef = AXUIElementCreateApplication(pid)
+
+        for attribute in [kAXFocusedWindowAttribute, kAXMainWindowAttribute] {
+            var value: CFTypeRef?
+            if AXUIElementCopyAttributeValue(appRef, attribute as CFString, &value) == .success,
+               let value,
+               CFGetTypeID(value) == AXUIElementGetTypeID() {
+                return (value as! AXUIElement)
+            }
+        }
+
+        let windows = windows(forApplicationPID: pid)
+        if let newWindow = windows.first(where: { window in
+            guard let windowID = ManagedGhosttyWindowRegistry.cgWindowID(window) else { return false }
+            return !existingWindowIDs.contains(windowID)
+        }) {
+            return newWindow
+        }
+
+        return windows.first(where: isNormalWindow)
+    }
+
+    private static func windows(forApplicationPID pid: pid_t) -> [AXUIElement] {
+        let appRef = AXUIElementCreateApplication(pid)
+        var value: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(appRef, kAXWindowsAttribute as CFString, &value) == .success,
+              let windows = value as? [AXUIElement]
+        else { return [] }
+
+        return windows
+    }
+
     // MARK: - AX helpers
 
     private static func isFullScreen(_ win: AXUIElement) -> Bool {
@@ -337,6 +491,14 @@ enum WindowArranger {
         }
 
         return true
+    }
+
+    private static func setMiniaturized(_ win: AXUIElement, _ miniaturized: Bool) {
+        AXUIElementSetAttributeValue(
+            win,
+            kAXMinimizedAttribute as CFString,
+            miniaturized as CFTypeRef
+        )
     }
 
     private static func disableEnhancedUserInterface() -> (appRef: AXUIElement, wasEnabled: Bool)? {

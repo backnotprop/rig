@@ -4,6 +4,8 @@ struct SessionRowView: View {
     let session: GhosttySession
     let isSelected: Bool
     let servers: [DetectedServer]
+    let onOpenServer: (DetectedServer) -> Void
+    let onOpenServerInSplit: (DetectedServer) -> Void
     @State private var isHovered = false
 
     var body: some View {
@@ -54,20 +56,34 @@ struct SessionRowView: View {
         if !servers.isEmpty {
             VStack(alignment: .leading, spacing: 3) {
                 ForEach(servers) { server in
-                    Button {
-                        NSWorkspace.shared.open(server.url)
-                    } label: {
-                        HStack(spacing: 5) {
-                            Image(systemName: "network")
-                                .font(.system(size: 9, weight: .medium))
-                                .foregroundStyle(.tertiary)
-                            Text(server.displayLabel)
-                                .font(.system(size: 11, weight: .medium))
-                                .foregroundStyle(.secondary)
+                    HStack(spacing: 6) {
+                        Button {
+                            onOpenServer(server)
+                        } label: {
+                            HStack(spacing: 5) {
+                                Image(systemName: "network")
+                                    .font(.system(size: 9, weight: .medium))
+                                    .foregroundStyle(.tertiary)
+                                Text(server.displayLabel)
+                                    .font(.system(size: 11, weight: .medium))
+                                    .foregroundStyle(.secondary)
+                            }
                         }
+                        .buttonStyle(.plain)
+                        .help("Open \(server.url.absoluteString)")
+
+                        Button {
+                            onOpenServerInSplit(server)
+                        } label: {
+                            Image(systemName: "rectangle.split.2x1")
+                                .font(.system(size: 9, weight: .semibold))
+                                .foregroundStyle(.tertiary)
+                                .frame(width: 16, height: 14)
+                                .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                        .help("Open beside Ghostty")
                     }
-                    .buttonStyle(.plain)
-                    .help("Open \(server.url.absoluteString)")
                 }
             }
             .padding(.leading, 26)
@@ -91,7 +107,9 @@ struct SessionRowView: View {
             servers: [
                 DetectedServer(id: "test|3000", port: 3000, processName: "node"),
                 DetectedServer(id: "test|5173", port: 5173, processName: "vite")
-            ]
+            ],
+            onOpenServer: { _ in },
+            onOpenServerInSplit: { _ in }
         )
         SessionRowView(
             session: GhosttySession(
@@ -102,7 +120,9 @@ struct SessionRowView: View {
                 ghosttyTerminalId: "term2"
             ),
             isSelected: false,
-            servers: []
+            servers: [],
+            onOpenServer: { _ in },
+            onOpenServerInSplit: { _ in }
         )
     }
     .padding()

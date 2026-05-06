@@ -1,3 +1,4 @@
+import AppKit
 import Combine
 import Foundation
 import SwiftUI
@@ -22,6 +23,9 @@ final class SessionListViewModel: ObservableObject {
     private var hasStarted = false
     private var focusTask: Task<Void, Never>?
     private var pendingFocusSessionID: GhosttySession.ID?
+    private var isDummyDataMode: Bool {
+        ProcessInfo.processInfo.environment["RIG_DUMMY_DATA"] == "1"
+    }
 
     init(
         controller: GhosttyControlling,
@@ -43,7 +47,7 @@ final class SessionListViewModel: ObservableObject {
             self?.serversBySession = newValue
         }
 
-        if ProcessInfo.processInfo.environment["RIG_DUMMY_DATA"] == "1" {
+        if isDummyDataMode {
             seedDummyData()
         }
     }
@@ -189,6 +193,23 @@ final class SessionListViewModel: ObservableObject {
         focusTask = Task { [weak self] in
             await self?.focus(session)
             self?.clearPendingFocus(if: session.id)
+        }
+    }
+
+    func openServerInSharedSpace(_ server: DetectedServer, for session: GhosttySession) {
+        if isDummyDataMode {
+            NSWorkspace.shared.open(server.url)
+            return
+        }
+
+        Task {
+            do {
+                try await WindowArranger.openURLInSharedSpace(server.url, beside: session)
+                lastError = nil
+            } catch {
+                NSWorkspace.shared.open(server.url)
+                lastError = error.localizedDescription
+            }
         }
     }
 

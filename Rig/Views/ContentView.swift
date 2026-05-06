@@ -304,7 +304,13 @@ struct ContentView: View {
             SessionRowView(
                 session: session,
                 isSelected: viewModel.selectedSessionID == session.id,
-                servers: viewModel.serversBySession[session.id] ?? []
+                servers: viewModel.serversBySession[session.id] ?? [],
+                onOpenServer: { server in
+                    NSWorkspace.shared.open(server.url)
+                },
+                onOpenServerInSplit: { server in
+                    viewModel.openServerInSharedSpace(server, for: session)
+                }
             )
         }
         .buttonStyle(.plain)
