@@ -27,6 +27,20 @@ enum GhosttyControllerError: LocalizedError {
     }
 }
 
+extension Error {
+    var isMissingManagedGhosttySurface: Bool {
+        guard let error = self as? GhosttyControllerError,
+              case GhosttyControllerError.scriptExecutionFailed(let message) = error
+        else {
+            return false
+        }
+
+        return message == "Rig could not find the managed Ghostty window."
+            || message == "Rig could not find the managed Ghostty tab."
+            || message == "Rig could not find the managed Ghostty terminal."
+    }
+}
+
 // Why @MainActor: NSAppleScript.executeAndReturnError needs a thread with a CFRunLoop.
 // Off-main it returns stale `front window` references and the "click + → focuses host
 // terminal" bug returns. Don't refactor to `actor`.
@@ -38,6 +52,7 @@ final class AppleScriptGhosttyController: GhosttyControlling {
     func createWindow(
         workingDirectory: String,
         initialInput: String?,
+        environmentVariables: [String],
         bringToFront: Bool
     ) async throws -> CreatedGhosttySurface {
         try Task.checkCancellation()
@@ -51,6 +66,16 @@ final class AppleScriptGhosttyController: GhosttyControlling {
             initialInputClause = "set initial input of cfg to \(Self.appleScriptLiteral(initialInput)) & linefeed"
         } else {
             initialInputClause = ""
+        }
+
+        let environmentVariablesClause: String
+        if environmentVariables.isEmpty {
+            environmentVariablesClause = ""
+        } else {
+            let values = environmentVariables
+                .map(Self.appleScriptLiteral)
+                .joined(separator: ", ")
+            environmentVariablesClause = "set environment variables of cfg to {\(values)}"
         }
 
         // Background launches skip `select tab` + `focus terminal`, which is what
@@ -89,6 +114,7 @@ final class AppleScriptGhosttyController: GhosttyControlling {
 
             set cfg to new surface configuration
             set initial working directory of cfg to \(Self.appleScriptLiteral(workingDirectory))
+            \(environmentVariablesClause)
             \(initialInputClause)
             set createdWin to new window with configuration cfg
 
@@ -246,23 +272,114 @@ final class AppleScriptGhosttyController: GhosttyControlling {
         return try decoder.decode(CreatedGhosttySurface.self, from: Data(json.utf8))
     }
 
+    func closeTerminal(
+        windowId: String,
+        tabId: String,
+        terminalId: String
+    ) async throws {
+        try Task.checkCancellation()
+        _ = try run(script: """
+        tell application "Ghostty"
+            set expectedWindowId to \(Self.appleScriptLiteral(windowId))
+            set expectedTabId to \(Self.appleScriptLiteral(tabId))
+            set expectedTerminalId to \(Self.appleScriptLiteral(terminalId))
+
+            set targetTerm to missing value
+            set targetTab to missing value
+            try
+                set targetTerm to terminal id expectedTerminalId
+            end try
+
+            if targetTerm is not missing value then
+                focus targetTerm
+                set targetTab to selected tab of front window
+            else
+                set targetWin to missing value
+                set winCount to 0
+                try
+                    set winCount to count of windows
+                end try
+                repeat with winIdx from 1 to winCount
+                    try
+                        set winRef to window winIdx
+                        if (id of winRef as text) is expectedWindowId then
+                            set targetWin to winRef
+                            exit repeat
+                        end if
+                    end try
+                end repeat
+                if targetWin is missing value then error "Rig could not find the managed Ghostty window."
+
+                set tabCount to 0
+                try
+                    set tabCount to count of tabs of targetWin
+                end try
+                repeat with tabIdx from 1 to tabCount
+                    try
+                        set tabRef to tab tabIdx of targetWin
+                        if (id of tabRef as text) is expectedTabId then
+                            set targetTab to tabRef
+                            exit repeat
+                        end if
+                    end try
+                end repeat
+                if targetTab is missing value then error "Rig could not find the managed Ghostty tab."
+
+                set termCount to 0
+                try
+                    set termCount to count of terminals of targetTab
+                end try
+                repeat with termIdx from 1 to termCount
+                    try
+                        set termRef to terminal termIdx of targetTab
+                        if (id of termRef as text) is expectedTerminalId then
+                            set targetTerm to termRef
+                            exit repeat
+                        end if
+                    end try
+                end repeat
+                if targetTerm is missing value then error "Rig could not find the managed Ghostty terminal."
+            end if
+
+            if targetTab is missing value then error "Rig could not find the managed Ghostty tab."
+
+            close tab targetTab
+            return "closed"
+        end tell
+        """)
+    }
+
     func closeWindow(windowId: String) async throws {
         try Task.checkCancellation()
-        _ = try? run(script: """
+        _ = try run(script: """
         tell application "Ghostty"
+            set expectedWindowId to \(Self.appleScriptLiteral(windowId))
+            set targetWin to missing value
+
+            try
+                set targetWin to window id expectedWindowId
+            end try
+
             set winCount to 0
             try
                 set winCount to count of windows
             end try
-            repeat with winIdx from 1 to winCount
-                try
-                    set winRef to window winIdx
-                    if (id of winRef as text) is \(Self.appleScriptLiteral(windowId)) then
-                        close window winRef
-                        exit repeat
-                    end if
-                end try
-            end repeat
+            if targetWin is missing value then
+                repeat with winIdx from 1 to winCount
+                    try
+                        set winRef to window winIdx
+                        if (id of winRef as text) is expectedWindowId then
+                            set targetWin to winRef
+                            exit repeat
+                        end if
+                    end try
+                end repeat
+            end if
+
+            if targetWin is missing value then error "Rig could not find the managed Ghostty window."
+
+            close window targetWin
+            return "closed"
         end tell
         """)
     }
@@ -286,7 +403,6 @@ final class AppleScriptGhosttyController: GhosttyControlling {
 
         return value
     }
-
     private static func appleScriptLiteral(_ value: String) -> String {
         let escaped = value
             .replacingOccurrences(of: "\\", with: "\\\\")

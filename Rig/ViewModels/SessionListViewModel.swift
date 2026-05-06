@@ -1,3 +1,4 @@
+import Combine
 import Foundation
 import SwiftUI
 
@@ -7,10 +8,13 @@ final class SessionListViewModel: ObservableObject {
     @Published var selectedSessionID: GhosttySession.ID?
     @Published private(set) var isCreatingSession = false
     @Published private(set) var lastError: String?
+    @Published private(set) var serversBySession: [UUID: [DetectedServer]] = [:]
 
     private let controller: GhosttyControlling
     private let homeDirectory: String
     let spaceSwitcher = SpaceSwitcher()
+    let portMonitor = PortMonitor()
+    private var portMonitorSink: AnyCancellable?
     var instantSpaceSwitching = true
     /// Called after a session switch to tuck the sidebar. Set by AppDelegate.
     var onSessionSwitched: (() -> Void)?
@@ -34,6 +38,49 @@ final class SessionListViewModel: ObservableObject {
     func start() async {
         guard !hasStarted else { return }
         hasStarted = true
+        portMonitor.startMonitoring()
+        portMonitorSink = portMonitor.$serversBySession.sink { [weak self] newValue in
+            self?.serversBySession = newValue
+        }
+
+        if ProcessInfo.processInfo.environment["RIG_DUMMY_DATA"] == "1" {
+            seedDummyData()
+        }
+    }
+
+    private func seedDummyData() {
+        let dummySessions: [(label: String, servers: [DetectedServer])] = [
+            ("π - scratch", [
+                DetectedServer(id: "d1|3000", port: 3000, processName: "node"),
+                DetectedServer(id: "d1|5173", port: 5173, processName: "vite"),
+            ]),
+            ("✳ Review PR changes", [
+                DetectedServer(id: "d2|8080", port: 8080, processName: "python3"),
+            ]),
+            ("claude - rig", []),
+            ("codex - api-service", [
+                DetectedServer(id: "d4|4000", port: 4000, processName: "node"),
+                DetectedServer(id: "d4|4001", port: 4001, processName: "node"),
+                DetectedServer(id: "d4|9229", port: 9229, processName: "node"),
+            ]),
+            ("opencode - frontend", []),
+        ]
+
+        for (i, dummy) in dummySessions.enumerated() {
+            let id = UUID()
+            let session = GhosttySession(
+                id: id,
+                label: dummy.label,
+                ghosttyWindowId: "dummy-win-\(i)",
+                ghosttyTabId: "dummy-tab-\(i)",
+                ghosttyTerminalId: "dummy-term-\(i)"
+            )
+            sessions.append(session)
+            if !dummy.servers.isEmpty {
+                serversBySession[id] = dummy.servers
+            }
+        }
+        selectedSessionID = sessions.first?.id
     }
 
     func createSession(
@@ -54,9 +101,13 @@ final class SessionListViewModel: ObservableObject {
             let ordinal = nextSessionOrdinal
             let label = "\(labelPrefix) \(ordinal)"
             let cwd = workingDirectory ?? homeDirectory
+            let sessionID = UUID()
             let createdSurface = try await controller.createWindow(
                 workingDirectory: cwd,
                 initialInput: command,
+                environmentVariables: [
+                    "\(PortMonitor.sessionEnvironmentKey)=\(sessionID.uuidString)"
+                ],
                 bringToFront: bringToFront
             )
             nextSessionOrdinal = ordinal + 1
@@ -68,9 +119,8 @@ final class SessionListViewModel: ObservableObject {
             let cgWID = SpaceSwitcher.ghosttyPID.flatMap {
                 SpaceSwitcher.newestWindowID(ownerPID: $0)
             } ?? 0
-
             let session = GhosttySession(
-                id: UUID(),
+                id: sessionID,
                 label: label,
                 harnessID: harnessID,
                 projectID: projectID,
@@ -80,6 +130,14 @@ final class SessionListViewModel: ObservableObject {
                 isBackgrounded: !bringToFront,
                 cgWindowID: cgWID
             )
+
+            if bringToFront,
+               !ManagedGhosttyWindowRegistry.registerFocusedWindow(sessionID: sessionID),
+               cgWID != 0 {
+                ManagedGhosttyWindowRegistry.register(sessionID: sessionID, windowID: cgWID)
+            }
+
+            portMonitor.registerSession(sessionID)
 
             withAnimation(.snappy(duration: 0.22)) {
                 sessions.append(session)
@@ -96,6 +154,7 @@ final class SessionListViewModel: ObservableObject {
         selectedSessionID = session.id
 
         if instantSpaceSwitching && session.cgWindowID != 0 {
+            ManagedGhosttyWindowRegistry.register(sessionID: session.id, windowID: session.cgWindowID)
             onSessionSwitched?()
             spaceSwitcher.switchToSpaceOf(windowID: session.cgWindowID)
             return
@@ -108,6 +167,8 @@ final class SessionListViewModel: ObservableObject {
                 tabId: session.ghosttyTabId,
                 terminalId: session.ghosttyTerminalId
             )
+            try? await Task.sleep(for: .milliseconds(120))
+            ManagedGhosttyWindowRegistry.registerFocusedWindow(sessionID: session.id)
             try Task.checkCancellation()
             if let idx = sessions.firstIndex(where: { $0.id == session.id }) {
                 sessions[idx].isBackgrounded = false
@@ -142,24 +203,27 @@ final class SessionListViewModel: ObservableObject {
     }
 
     func remove(_ session: GhosttySession) {
+        portMonitor.removeSession(session.id)
         withAnimation(.snappy(duration: 0.18)) {
             sessions.removeAll { $0.id == session.id }
             if selectedSessionID == session.id {
                 selectedSessionID = sessions.first?.id
             }
         }
+        Task {
+            await closeGhosttySessions([session])
+        }
     }
 
     func removeAll() {
         let toClose = sessions
+        portMonitor.removeAll()
         withAnimation(.snappy(duration: 0.18)) {
             sessions.removeAll()
             selectedSessionID = nil
         }
         Task {
-            for session in toClose {
-                try? await controller.closeWindow(windowId: session.ghosttyWindowId)
-            }
+            await closeGhosttySessions(toClose)
         }
     }
 
@@ -199,6 +263,53 @@ final class SessionListViewModel: ObservableObject {
         lastError = nil
     }
 
+    /// Refreshes session labels from Ghostty's current window titles.
+    /// Called when Rig reveals so the list always shows up-to-date names.
+    func refreshSessionTitles() {
+        let windowIDs = sessions.map(\.ghosttyWindowId)
+        guard !windowIDs.isEmpty else { return }
+
+        let idList = windowIDs.map { "\"\($0)\"" }.joined(separator: ", ")
+        let source = """
+        tell application "Ghostty"
+            set targetIds to {\(idList)}
+            set output to ""
+            set winCount to 0
+            try
+                set winCount to count of windows
+            end try
+            repeat with winIdx from 1 to winCount
+                try
+                    set winRef to window winIdx
+                    set winId to id of winRef as text
+                    if targetIds contains winId then
+                        set winTitle to name of winRef as text
+                        set output to output & winId & "|" & winTitle & linefeed
+                    end if
+                end try
+            end repeat
+            return output
+        end tell
+        """
+
+        var errorInfo: NSDictionary?
+        guard let script = NSAppleScript(source: source) else { return }
+        let result = script.executeAndReturnError(&errorInfo)
+        guard let raw = result.stringValue else { return }
+
+        for line in raw.split(separator: "\n") {
+            let parts = line.split(separator: "|", maxSplits: 1)
+            guard parts.count == 2 else { continue }
+            let winId = String(parts[0])
+            let title = String(parts[1])
+            if let idx = sessions.firstIndex(where: { $0.ghosttyWindowId == winId }) {
+                if sessions[idx].label != title {
+                    sessions[idx].label = title
+                }
+            }
+        }
+    }
+
     private var selectedSession: GhosttySession? {
         guard let selectedSessionID else { return sessions.first }
         return sessions.first { $0.id == selectedSessionID }
@@ -207,6 +318,25 @@ final class SessionListViewModel: ObservableObject {
     private func clearPendingFocus(if sessionID: GhosttySession.ID) {
         if pendingFocusSessionID == sessionID {
             pendingFocusSessionID = nil
+        }
+    }
+
+    private func closeGhosttySessions(_ sessions: [GhosttySession]) async {
+        guard !sessions.isEmpty else { return }
+
+        await WindowArranger.exitNativeFullScreen(sessions: sessions)
+
+        for session in sessions {
+            do {
+                try await controller.closeWindow(windowId: session.ghosttyWindowId)
+                lastError = nil
+            } catch where error.isMissingManagedGhosttySurface {
+                lastError = nil
+            } catch {
+                lastError = error.localizedDescription
+            }
+
+            ManagedGhosttyWindowRegistry.remove(session.id)
         }
     }
 }

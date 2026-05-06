@@ -182,6 +182,7 @@ struct ContentView: View {
             if viewModel.sessions.isEmpty {
                 emptyState
             } else {
+                arrangeButton
                 sessionList
             }
         }
@@ -206,6 +207,66 @@ struct ContentView: View {
     private var emptyState: some View {
         Spacer()
             .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    private var arrangeButton: some View {
+        HStack {
+            Menu {
+                Button {
+                    arrangeWindows(.cascade)
+                } label: {
+                    Label("Cascade", systemImage: "rectangle.stack")
+                }
+                Button {
+                    arrangeWindows(.grid)
+                } label: {
+                    Label("Grid", systemImage: "square.grid.2x2")
+                }
+                Button {
+                    arrangeWindows(.sideBySide)
+                } label: {
+                    Label("Side by Side", systemImage: "rectangle.split.3x1")
+                }
+                Divider()
+                Button {
+                    arrangeWindows(.fillScreen)
+                } label: {
+                    Label("Fill Screen", systemImage: "arrow.up.left.and.arrow.down.right")
+                }
+            } label: {
+                Image(systemName: "rectangle.3.group")
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundStyle(.secondary)
+                    .frame(width: 24, height: 20)
+                    .contentShape(Rectangle())
+            }
+            .menuStyle(.button)
+            .buttonStyle(.plain)
+            .menuIndicator(.hidden)
+            .help("Arrange windows")
+
+            Spacer()
+        }
+        .padding(.horizontal, 10)
+    }
+
+    private func arrangeWindows(_ layout: WindowArranger.Layout) {
+        let sessions = managedSessions
+
+        Task {
+            await WindowArranger.arrange(sessions: sessions, layout: layout)
+        }
+    }
+
+    private var managedSessions: [GhosttySession] {
+        let sessions: [GhosttySession]
+        if let projectID = store.config.preferences.selectedProjectID {
+            sessions = viewModel.sessions.filter { $0.projectID == projectID }
+        } else {
+            sessions = viewModel.sessions
+        }
+
+        return sessions
     }
 
     private var sessionList: some View {
@@ -242,7 +303,8 @@ struct ContentView: View {
         } label: {
             SessionRowView(
                 session: session,
-                isSelected: viewModel.selectedSessionID == session.id
+                isSelected: viewModel.selectedSessionID == session.id,
+                servers: viewModel.serversBySession[session.id] ?? []
             )
         }
         .buttonStyle(.plain)
@@ -304,6 +366,7 @@ private struct PreviewGhosttyController: GhosttyControlling {
     func createWindow(
         workingDirectory: String,
         initialInput: String?,
+        environmentVariables: [String],
         bringToFront: Bool
     ) async throws -> CreatedGhosttySurface {
         CreatedGhosttySurface(
@@ -326,6 +389,12 @@ private struct PreviewGhosttyController: GhosttyControlling {
             workingDirectory: FileManager.default.homeDirectoryForCurrentUser.path
         )
     }
+
+    func closeTerminal(
+        windowId: String,
+        tabId: String,
+        terminalId: String
+    ) async throws {}
 
     func closeWindow(windowId: String) async throws {}
 }

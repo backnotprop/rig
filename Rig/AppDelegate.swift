@@ -102,6 +102,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
         viewModel.onSessionSwitched = { [weak self] in
             self?.autoHide?.tuck()
         }
+        autoHide?.onReveal = { [weak self] in
+            self?.viewModel.refreshSessionTitles()
+        }
 
 
 

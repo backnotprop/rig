@@ -3,9 +3,17 @@ import SwiftUI
 struct SessionRowView: View {
     let session: GhosttySession
     let isSelected: Bool
+    let servers: [DetectedServer]
     @State private var isHovered = false
 
     var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            sessionLabel
+            serverList
+        }
+    }
+
+    private var sessionLabel: some View {
         HStack(spacing: 9) {
             Text(session.label)
                 .font(.system(size: 13, weight: isSelected ? .semibold : .regular))
@@ -26,10 +34,6 @@ struct SessionRowView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, 14)
         .contentShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
-        // Why plain tinted fills (not .glassEffect): the panel background is already
-        // an NSVisualEffectView. Stacking SwiftUI .glassEffect on top produces an
-        // intensely over-blurred result ("glass on glass") that Apple's docs explicitly
-        // warn against.
         .background {
             let shape = RoundedRectangle(cornerRadius: 18, style: .continuous)
 
@@ -44,6 +48,33 @@ struct SessionRowView: View {
         .animation(.snappy(duration: 0.16), value: isHovered)
         .accessibilityLabel(session.label)
     }
+
+    @ViewBuilder
+    private var serverList: some View {
+        if !servers.isEmpty {
+            VStack(alignment: .leading, spacing: 3) {
+                ForEach(servers) { server in
+                    Button {
+                        NSWorkspace.shared.open(server.url)
+                    } label: {
+                        HStack(spacing: 5) {
+                            Image(systemName: "network")
+                                .font(.system(size: 9, weight: .medium))
+                                .foregroundStyle(.tertiary)
+                            Text(server.displayLabel)
+                                .font(.system(size: 11, weight: .medium))
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                    .buttonStyle(.plain)
+                    .help("Open \(server.url.absoluteString)")
+                }
+            }
+            .padding(.leading, 26)
+            .padding(.top, 2)
+            .padding(.bottom, 4)
+        }
+    }
 }
 
 #Preview {
@@ -51,22 +82,27 @@ struct SessionRowView: View {
         SessionRowView(
             session: GhosttySession(
                 id: UUID(),
-                label: "Session 1",
+                label: "Pi — scratch",
                 ghosttyWindowId: "w",
                 ghosttyTabId: "t",
                 ghosttyTerminalId: "term"
             ),
-            isSelected: true
+            isSelected: true,
+            servers: [
+                DetectedServer(id: "test|3000", port: 3000, processName: "node"),
+                DetectedServer(id: "test|5173", port: 5173, processName: "vite")
+            ]
         )
         SessionRowView(
             session: GhosttySession(
                 id: UUID(),
-                label: "Session 2",
+                label: "Claude Code — rig",
                 ghosttyWindowId: "w2",
                 ghosttyTabId: "t2",
                 ghosttyTerminalId: "term2"
             ),
-            isSelected: false
+            isSelected: false,
+            servers: []
         )
     }
     .padding()

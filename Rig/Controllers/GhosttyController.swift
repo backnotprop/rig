@@ -9,6 +9,7 @@ protocol GhosttyControlling: Sendable {
     func createWindow(
         workingDirectory: String,
         initialInput: String?,
+        environmentVariables: [String],
         bringToFront: Bool
     ) async throws -> CreatedGhosttySurface
 
@@ -17,6 +18,12 @@ protocol GhosttyControlling: Sendable {
         tabId: String,
         terminalId: String
     ) async throws -> CreatedGhosttySurface
+
+    func closeTerminal(
+        windowId: String,
+        tabId: String,
+        terminalId: String
+    ) async throws
 
     func closeWindow(windowId: String) async throws
 }

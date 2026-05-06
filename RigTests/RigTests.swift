@@ -51,9 +51,18 @@ final class RigTests: XCTestCase {
         await viewModel.createSession()
 
         let createdWorkingDirectories = await controller.createdWorkingDirectoriesSnapshot()
+        let createdEnvironmentVariables = await controller.createdEnvironmentVariablesSnapshot()
 
         XCTAssertEqual(viewModel.sessions.map(\.label), ["Session 1", "Session 2"])
         XCTAssertEqual(createdWorkingDirectories, ["/Users/tester", "/Users/tester"])
+        XCTAssertEqual(createdEnvironmentVariables.count, 2)
+        XCTAssertTrue(
+            createdEnvironmentVariables.allSatisfy { variables in
+                variables.contains { variable in
+                    variable.hasPrefix("\(PortMonitor.sessionEnvironmentKey)=")
+                }
+            }
+        )
     }
 
     @MainActor
@@ -88,6 +97,7 @@ final class RigTests: XCTestCase {
             controller: controller,
             homeDirectory: "/Users/tester"
         )
+        viewModel.instantSpaceSwitching = false
 
         await viewModel.start()
         await viewModel.createSession()
@@ -109,6 +119,30 @@ final class RigTests: XCTestCase {
         viewModel.removeSelected()
 
         XCTAssertTrue(viewModel.sessions.isEmpty)
+    }
+
+    @MainActor
+    func testRemoveIgnoresAlreadyClosedGhosttyWindow() async throws {
+        let controller = FakeGhosttyController()
+        let viewModel = SessionListViewModel(controller: controller)
+
+        await viewModel.start()
+        await viewModel.createSession()
+        let session = try XCTUnwrap(viewModel.sessions.first)
+        await controller.setCloseWindowError(
+            GhosttyControllerError.scriptExecutionFailed("Rig could not find the managed Ghostty window.")
+        )
+
+        viewModel.remove(session)
+
+        for _ in 0..<30 {
+            if await controller.closeWindowCallCountSnapshot() > 0 { break }
+            try await Task.sleep(for: .milliseconds(100))
+        }
+        try await Task.sleep(for: .milliseconds(50))
+
+        XCTAssertTrue(viewModel.sessions.isEmpty)
+        XCTAssertNil(viewModel.lastError)
     }
 
     func testComposedCommandReturnsBareCommandWhenNoFlagsSet() {
@@ -272,10 +306,11 @@ final class RigTests: XCTestCase {
             throw XCTSkip("Set RUN_GHOSTTY_INTEGRATION=1 to create and focus a real Ghostty window.")
         }
 
-        let controller = await AppleScriptGhosttyController()
+        let controller = AppleScriptGhosttyController()
         let created = try await controller.createWindow(
             workingDirectory: FileManager.default.homeDirectoryForCurrentUser.path,
             initialInput: nil,
+            environmentVariables: [],
             bringToFront: true
         )
 
@@ -297,19 +332,34 @@ final class RigTests: XCTestCase {
 private actor FakeGhosttyController: GhosttyControlling {
     private var counter = 0
     private var createdWorkingDirectories: [String] = []
+    private var createdEnvironmentVariables: [[String]] = []
     private var lastInitialInput: String?
     private var shouldFailFocus = false
+    private var closeWindowError: Error?
+    private var closeWindowCallCount = 0
 
     func setShouldFailFocus(_ value: Bool) {
         shouldFailFocus = value
+    }
+
+    func setCloseWindowError(_ error: Error?) {
+        closeWindowError = error
     }
 
     func createdWorkingDirectoriesSnapshot() -> [String] {
         createdWorkingDirectories
     }
 
+    func createdEnvironmentVariablesSnapshot() -> [[String]] {
+        createdEnvironmentVariables
+    }
+
     func lastInitialInputSnapshot() -> String? {
         lastInitialInput
+    }
+
+    func closeWindowCallCountSnapshot() -> Int {
+        closeWindowCallCount
     }
 
     private(set) var lastBringToFront: Bool?
@@ -317,12 +367,14 @@ private actor FakeGhosttyController: GhosttyControlling {
     func createWindow(
         workingDirectory: String,
         initialInput: String?,
+        environmentVariables: [String],
         bringToFront: Bool
     ) async throws -> CreatedGhosttySurface {
         try Task.checkCancellation()
 
         counter += 1
         createdWorkingDirectories.append(workingDirectory)
+        createdEnvironmentVariables.append(environmentVariables)
         lastInitialInput = initialInput
         lastBringToFront = bringToFront
 
@@ -353,5 +405,17 @@ private actor FakeGhosttyController: GhosttyControlling {
         )
     }
 
-    func closeWindow(windowId: String) async throws {}
+    func closeTerminal(
+        windowId: String,
+        tabId: String,
+        terminalId: String
+    ) async throws {}
+
+    func closeWindow(windowId: String) async throws {
+        closeWindowCallCount += 1
+
+        if let closeWindowError {
+            throw closeWindowError
+        }
+    }
 }

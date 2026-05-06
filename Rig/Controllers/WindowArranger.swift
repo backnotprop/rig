@@ -1,0 +1,409 @@
+import AppKit
+import ApplicationServices
+
+/// Arranges Rig-managed Ghostty windows on the current screen.
+@MainActor
+enum WindowArranger {
+    private static func log(_ msg: String) {
+        let path = "/tmp/rig-arrange-debug.log"
+        let line = msg + "\n"
+        if let fh = FileHandle(forWritingAtPath: path) {
+            fh.seekToEndOfFile()
+            fh.write(line.data(using: .utf8)!)
+            fh.closeFile()
+        } else {
+            FileManager.default.createFile(atPath: path, contents: line.data(using: .utf8))
+        }
+    }
+
+    enum Layout {
+        case cascade
+        case grid
+        case sideBySide
+        case fillScreen
+    }
+
+    private struct TargetFrame {
+        var x: CGFloat
+        var y: CGFloat
+        var width: CGFloat
+        var height: CGFloat
+    }
+
+    /// Arranges Rig's session windows by using Ghostty scripting IDs for
+    /// identity and Accessibility only for native window state/placement.
+    static func arrange(sessions: [GhosttySession], layout: Layout) async {
+        guard !sessions.isEmpty else { return }
+
+        let captured = await captureWindows(for: sessions)
+        Self.log("[ARRANGE] captured \(captured.count) windows for \(sessions.count) sessions")
+        guard !captured.isEmpty else { return }
+
+        guard let screen = NSScreen.main else { return }
+        let frame = screen.visibleFrame
+        let targetFrames = targetFrames(count: captured.count, layout: layout, in: frame)
+
+        let enhancedUIRestore = disableEnhancedUserInterface()
+        defer {
+            restoreEnhancedUserInterface(enhancedUIRestore)
+        }
+
+        var didExitFullScreen = false
+        for (index, item) in captured.enumerated() where isFullScreen(item.window) {
+            applyFrame(targetFrames[index], to: item.window)
+            if setFullScreen(item.window, false) {
+                didExitFullScreen = true
+                Self.log("[ARRANGE] exited fullscreen for \(item.session.ghosttyWindowId)")
+            }
+        }
+
+        if didExitFullScreen {
+            for delay in [160, 260, 320, 320] {
+                try? await Task.sleep(for: .milliseconds(delay))
+                applyFrames(targetFrames, to: captured)
+            }
+        }
+
+        let ready = captured.enumerated().compactMap { index, item -> (window: AXUIElement, targetFrame: TargetFrame)? in
+            let window = ManagedGhosttyWindowRegistry.window(for: item.session.id) ?? item.window
+            guard !isFullScreen(window), isNormalWindow(window) else {
+                Self.log("[ARRANGE] skipped \(item.session.ghosttyWindowId): window not ready for layout")
+                return nil
+            }
+
+            return (window, targetFrames[index])
+        }
+        guard !ready.isEmpty else { return }
+
+        for item in ready {
+            applyFrame(item.targetFrame, to: item.window)
+            raise(item.window)
+        }
+    }
+
+    /// Exits macOS native fullscreen for managed windows before lifecycle
+    /// operations. This deliberately does not position the windows; AppKit
+    /// restores their normal frames and then the caller can close them.
+    static func exitNativeFullScreen(sessions: [GhosttySession]) async {
+        guard !sessions.isEmpty else { return }
+
+        let captured = await captureWindows(for: sessions)
+        let fullScreenWindows = captured.filter { isFullScreen($0.window) }
+        guard !fullScreenWindows.isEmpty else { return }
+
+        let enhancedUIRestore = disableEnhancedUserInterface()
+        defer {
+            restoreEnhancedUserInterface(enhancedUIRestore)
+        }
+
+        for item in fullScreenWindows {
+            if setFullScreen(item.window, false) {
+                Self.log("[ARRANGE] close-prep exited fullscreen for \(item.session.ghosttyWindowId)")
+            }
+        }
+
+        try? await Task.sleep(for: .milliseconds(900))
+    }
+
+    private static func captureWindows(for sessions: [GhosttySession]) async -> [(session: GhosttySession, window: AXUIElement)] {
+        var captured: [(session: GhosttySession, window: AXUIElement)] = []
+        var seenWindowIDs = Set<CGWindowID>()
+
+        for session in sessions {
+            guard let axWindow = await resolveWindow(for: session) else {
+                Self.log("[ARRANGE] skipped \(session.ghosttyWindowId): no AX window")
+                continue
+            }
+
+            if let windowID = ManagedGhosttyWindowRegistry.cgWindowID(axWindow) {
+                guard seenWindowIDs.insert(windowID).inserted else {
+                    Self.log("[ARRANGE] skipped duplicate CGWindowID \(windowID) for \(session.ghosttyWindowId)")
+                    continue
+                }
+            }
+
+            captured.append((session, axWindow))
+        }
+
+        return captured
+    }
+
+    // MARK: - Layouts
+
+    private static func targetFrames(count: Int, layout: Layout, in frame: NSRect) -> [TargetFrame] {
+        switch layout {
+        case .cascade:
+            cascadeFrames(count: count, in: frame)
+        case .grid:
+            gridFrames(count: count, in: frame)
+        case .sideBySide:
+            sideBySideFrames(count: count, in: frame)
+        case .fillScreen:
+            fillScreenFrames(count: count, in: frame)
+        }
+    }
+
+    private static func cascadeFrames(count: Int, in frame: NSRect) -> [TargetFrame] {
+        let windowWidth = frame.width * 0.7
+        let windowHeight = frame.height * 0.7
+        let offsetX: CGFloat = 30
+        let offsetY: CGFloat = 30
+
+        return (0..<count).map { i in
+            let x = frame.origin.x + CGFloat(i) * offsetX
+            let y = frame.origin.y + frame.height - windowHeight - CGFloat(i) * offsetY
+            return TargetFrame(
+                x: x,
+                y: screenFlipY(y, height: windowHeight),
+                width: windowWidth,
+                height: windowHeight
+            )
+        }
+    }
+
+    private static func gridFrames(count: Int, in frame: NSRect) -> [TargetFrame] {
+        let cols = Int(ceil(sqrt(Double(count))))
+        let rows = Int(ceil(Double(count) / Double(cols)))
+        let cellWidth = frame.width / CGFloat(cols)
+        let cellHeight = frame.height / CGFloat(rows)
+
+        return (0..<count).map { i in
+            let col = i % cols
+            let row = i / cols
+            let x = frame.origin.x + CGFloat(col) * cellWidth
+            let y = frame.origin.y + frame.height - CGFloat(row + 1) * cellHeight
+            return TargetFrame(
+                x: x,
+                y: screenFlipY(y, height: cellHeight),
+                width: cellWidth,
+                height: cellHeight
+            )
+        }
+    }
+
+    private static func sideBySideFrames(count: Int, in frame: NSRect) -> [TargetFrame] {
+        let cellWidth = frame.width / CGFloat(count)
+
+        return (0..<count).map { i in
+            let x = frame.origin.x + CGFloat(i) * cellWidth
+            return TargetFrame(
+                x: x,
+                y: screenFlipY(frame.origin.y, height: frame.height),
+                width: cellWidth,
+                height: frame.height
+            )
+        }
+    }
+
+    private static func fillScreenFrames(count: Int, in frame: NSRect) -> [TargetFrame] {
+        let targetFrame = TargetFrame(
+            x: frame.origin.x,
+            y: screenFlipY(frame.origin.y, height: frame.height),
+            width: frame.width,
+            height: frame.height
+        )
+
+        return Array(repeating: targetFrame, count: count)
+    }
+
+    private static func applyFrames(
+        _ targetFrames: [TargetFrame],
+        to captured: [(session: GhosttySession, window: AXUIElement)]
+    ) {
+        for (index, item) in captured.enumerated() where targetFrames.indices.contains(index) {
+            let window = ManagedGhosttyWindowRegistry.window(for: item.session.id) ?? item.window
+            applyFrame(targetFrames[index], to: window)
+        }
+    }
+
+    private static func applyFrame(_ targetFrame: TargetFrame, to window: AXUIElement) {
+        setSize(window, width: targetFrame.width, height: targetFrame.height)
+        setPosition(window, x: targetFrame.x, y: targetFrame.y)
+        setSize(window, width: targetFrame.width, height: targetFrame.height)
+    }
+
+    // MARK: - Window identification
+
+    private static func resolveWindow(for session: GhosttySession) async -> AXUIElement? {
+        if let window = ManagedGhosttyWindowRegistry.window(for: session.id) {
+            return window
+        }
+
+        if ManagedGhosttyWindowRegistry.register(sessionID: session.id, windowID: session.cgWindowID),
+           let window = ManagedGhosttyWindowRegistry.window(for: session.id) {
+            return window
+        }
+
+        guard focusSessionViaAppleScript(session) else { return nil }
+        try? await Task.sleep(for: .milliseconds(180))
+
+        guard ManagedGhosttyWindowRegistry.registerFocusedWindow(sessionID: session.id) else {
+            return nil
+        }
+
+        return ManagedGhosttyWindowRegistry.window(for: session.id)
+    }
+
+    private static func focusSessionViaAppleScript(_ session: GhosttySession) -> Bool {
+        let source = """
+        tell application "Ghostty"
+            set expectedWindowId to \(appleScriptLiteral(session.ghosttyWindowId))
+            set expectedTerminalId to \(appleScriptLiteral(session.ghosttyTerminalId))
+
+            set targetWin to missing value
+            set winCount to 0
+            try
+                set winCount to count of windows
+            end try
+            repeat with winIdx from 1 to winCount
+                try
+                    set winRef to window winIdx
+                    if (id of winRef as text) is expectedWindowId then
+                        set targetWin to winRef
+                        exit repeat
+                    end if
+                end try
+            end repeat
+            if targetWin is missing value then error "Rig could not find the managed Ghostty window."
+
+            set targetTerm to missing value
+            set termCount to 0
+            try
+                set termCount to count of terminals of targetWin
+            end try
+            repeat with termIdx from 1 to termCount
+                try
+                    set termRef to terminal termIdx of targetWin
+                    if (id of termRef as text) is expectedTerminalId then
+                        set targetTerm to termRef
+                        exit repeat
+                    end if
+                end try
+            end repeat
+            if targetTerm is missing value then error "Rig could not find the managed Ghostty terminal."
+
+            try
+                set visible of targetWin to true
+            end try
+            try
+                set miniaturized of targetWin to false
+            end try
+
+            activate window targetWin
+            focus targetTerm
+            return id of targetWin as text
+        end tell
+        """
+
+        var errorInfo: NSDictionary?
+        guard let script = NSAppleScript(source: source) else { return false }
+        let result = script.executeAndReturnError(&errorInfo)
+        if let errorInfo {
+            let message = errorInfo[NSAppleScript.errorMessage] as? String
+                ?? errorInfo.description
+            Self.log("[ARRANGE] AppleScript focus error for \(session.ghosttyWindowId): \(message)")
+            return false
+        }
+
+        return result.stringValue == session.ghosttyWindowId
+    }
+
+    private static func appleScriptLiteral(_ value: String) -> String {
+        let escaped = value
+            .replacingOccurrences(of: "\\", with: "\\\\")
+            .replacingOccurrences(of: "\"", with: "\\\"")
+            .replacingOccurrences(of: "\n", with: "\\n")
+            .replacingOccurrences(of: "\r", with: "\\r")
+
+        return "\"\(escaped)\""
+    }
+
+    // MARK: - AX helpers
+
+    private static func isFullScreen(_ win: AXUIElement) -> Bool {
+        var value: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(win, "AXFullScreen" as CFString, &value) == .success,
+              let isFullScreen = value as? Bool
+        else { return false }
+
+        return isFullScreen
+    }
+
+    private static func setFullScreen(_ win: AXUIElement, _ fullScreen: Bool) -> Bool {
+        let error = AXUIElementSetAttributeValue(win, "AXFullScreen" as CFString, fullScreen as CFTypeRef)
+        if error != .success {
+            Self.log("[ARRANGE] AXFullScreen set failed: \(error.rawValue)")
+            return false
+        }
+
+        return true
+    }
+
+    private static func disableEnhancedUserInterface() -> (appRef: AXUIElement, wasEnabled: Bool)? {
+        guard let pid = SpaceSwitcher.ghosttyPID else { return nil }
+
+        let appRef = AXUIElementCreateApplication(pid)
+        var value: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(appRef, "AXEnhancedUserInterface" as CFString, &value) == .success,
+              let wasEnabled = value as? Bool
+        else { return nil }
+
+        if wasEnabled {
+            AXUIElementSetAttributeValue(
+                appRef,
+                "AXEnhancedUserInterface" as CFString,
+                false as CFTypeRef
+            )
+        }
+
+        return (appRef, wasEnabled)
+    }
+
+    private static func restoreEnhancedUserInterface(_ state: (appRef: AXUIElement, wasEnabled: Bool)?) {
+        guard let state, state.wasEnabled else { return }
+        AXUIElementSetAttributeValue(
+            state.appRef,
+            "AXEnhancedUserInterface" as CFString,
+            true as CFTypeRef
+        )
+    }
+
+    private static func isNormalWindow(_ win: AXUIElement) -> Bool {
+        var sizeRef: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(win, kAXSizeAttribute as CFString, &sizeRef) == .success,
+              let sizeValue = sizeRef
+        else { return false }
+
+        var size = CGSize.zero
+        guard AXValueGetValue(sizeValue as! AXValue, .cgSize, &size) else { return false }
+        return size.width > 100 && size.height > 100
+    }
+
+    private static func setPosition(_ win: AXUIElement, x: CGFloat, y: CGFloat) {
+        var point = CGPoint(x: x, y: y)
+        if let val = AXValueCreate(.cgPoint, &point) {
+            AXUIElementSetAttributeValue(win, kAXPositionAttribute as CFString, val)
+        }
+    }
+
+    private static func setSize(_ win: AXUIElement, width: CGFloat, height: CGFloat) {
+        var size = CGSize(width: width, height: height)
+        if let val = AXValueCreate(.cgSize, &size) {
+            AXUIElementSetAttributeValue(win, kAXSizeAttribute as CFString, val)
+        }
+    }
+
+    private static func raise(_ win: AXUIElement) {
+        AXUIElementPerformAction(win, kAXRaiseAction as CFString)
+    }
+
+    /// AX uses top-left screen coordinates; NSScreen uses bottom-left.
+    private static func screenFlipY(_ y: CGFloat, height: CGFloat) -> CGFloat {
+        guard let screen = NSScreen.main else { return y }
+        return screen.frame.height - y - height
+    }
+}
+
+/// Private but stable AX function to get CGWindowID from an AXUIElement.
+@_silgen_name("_AXUIElementGetWindow")
+func _AXUIElementGetWindow(_ element: AXUIElement, _ windowID: UnsafeMutablePointer<CGWindowID>) -> AXError

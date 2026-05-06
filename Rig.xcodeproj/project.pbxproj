@@ -41,6 +41,9 @@
 		B00000000000000000000023 /* PromptComposer.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000125 /* PromptComposer.swift */; };
 		B00000000000000000000027 /* SpaceSwitching.c in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000012B /* SpaceSwitching.c */; };
 		B00000000000000000000028 /* SpaceSwitcher.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000012C /* SpaceSwitcher.swift */; };
+		B00000000000000000000029 /* WindowArranger.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000012E /* WindowArranger.swift */; };
+		B00000000000000000000030 /* ManagedGhosttyWindowRegistry.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000012F /* ManagedGhosttyWindowRegistry.swift */; };
+		B00000000000000000000031 /* PortMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000130 /* PortMonitor.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -94,6 +97,9 @@
 		A0000000000000000000012B /* SpaceSwitching.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = SpaceSwitching.c; sourceTree = "<group>"; };
 		A0000000000000000000012C /* SpaceSwitcher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpaceSwitcher.swift; sourceTree = "<group>"; };
 		A0000000000000000000012D /* Rig-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "Rig-Bridging-Header.h"; sourceTree = "<group>"; };
+		A0000000000000000000012E /* WindowArranger.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WindowArranger.swift; sourceTree = "<group>"; };
+		A0000000000000000000012F /* ManagedGhosttyWindowRegistry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ManagedGhosttyWindowRegistry.swift; sourceTree = "<group>"; };
+		A00000000000000000000130 /* PortMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PortMonitor.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -160,6 +166,9 @@
 				A00000000000000000000107 /* GhosttyController.swift */,
 				A00000000000000000000108 /* AppleScriptGhosttyController.swift */,
 				A00000000000000000000122 /* ShellRunner.swift */,
+				A0000000000000000000012E /* WindowArranger.swift */,
+				A0000000000000000000012F /* ManagedGhosttyWindowRegistry.swift */,
+				A00000000000000000000130 /* PortMonitor.swift */,
 			);
 			path = Controllers;
 			sourceTree = "<group>";
@@ -369,6 +378,9 @@
 				B00000000000000000000023 /* PromptComposer.swift in Sources */,
 				B00000000000000000000027 /* SpaceSwitching.c in Sources */,
 				B00000000000000000000028 /* SpaceSwitcher.swift in Sources */,
+				B00000000000000000000029 /* WindowArranger.swift in Sources */,
+				B00000000000000000000031 /* PortMonitor.swift in Sources */,
+				B00000000000000000000030 /* ManagedGhosttyWindowRegistry.swift in Sources */,
 				B00000000000000000000003 /* ContentView.swift in Sources */,
 				B00000000000000000000004 /* SessionRowView.swift in Sources */,
 				B0000000000000000000000E /* LauncherRowView.swift in Sources */,

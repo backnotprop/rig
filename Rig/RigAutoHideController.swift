@@ -17,6 +17,9 @@ final class RigAutoHideController {
     /// they're actively dragging the edge.
     private var isResizing = false
 
+    /// Called when the panel reveals — used to refresh session titles.
+    var onReveal: (() -> Void)?
+
     private let animationDuration: TimeInterval = 0.40
     /// 0.8s (was 0.3s): the old grace was tight enough that moving the cursor
     /// to the panel's right edge to grab the resize affordance was racing the
@@ -206,6 +209,7 @@ final class RigAutoHideController {
         guard !isRevealed else { return }
         isRevealed = true
         isTucked = false
+        onReveal?()
         if !panel.isVisible {
             panel.setFrame(hiddenFrame, display: false)
             panel.orderFrontRegardless()
