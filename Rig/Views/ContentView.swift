@@ -310,6 +310,9 @@ struct ContentView: View {
                 },
                 onOpenServerInSplit: { server in
                     viewModel.openServerInSharedSpace(server, for: session)
+                },
+                onOpenServerInNativeSplit: { server in
+                    viewModel.openServerInNativeSplitView(server, for: session)
                 }
             )
         }

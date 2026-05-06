@@ -6,6 +6,7 @@ struct SessionRowView: View {
     let servers: [DetectedServer]
     let onOpenServer: (DetectedServer) -> Void
     let onOpenServerInSplit: (DetectedServer) -> Void
+    let onOpenServerInNativeSplit: (DetectedServer) -> Void
     @State private var isHovered = false
 
     var body: some View {
@@ -83,6 +84,18 @@ struct SessionRowView: View {
                         }
                         .buttonStyle(.plain)
                         .help("Open beside Ghostty")
+
+                        Button {
+                            onOpenServerInNativeSplit(server)
+                        } label: {
+                            Image(systemName: "rectangle.split.2x1.fill")
+                                .font(.system(size: 9, weight: .semibold))
+                                .foregroundStyle(.tertiary)
+                                .frame(width: 16, height: 14)
+                                .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                        .help("Open in native Split View")
                     }
                 }
             }
@@ -109,7 +122,8 @@ struct SessionRowView: View {
                 DetectedServer(id: "test|5173", port: 5173, processName: "vite")
             ],
             onOpenServer: { _ in },
-            onOpenServerInSplit: { _ in }
+            onOpenServerInSplit: { _ in },
+            onOpenServerInNativeSplit: { _ in }
         )
         SessionRowView(
             session: GhosttySession(
@@ -122,7 +136,8 @@ struct SessionRowView: View {
             isSelected: false,
             servers: [],
             onOpenServer: { _ in },
-            onOpenServerInSplit: { _ in }
+            onOpenServerInSplit: { _ in },
+            onOpenServerInNativeSplit: { _ in }
         )
     }
     .padding()

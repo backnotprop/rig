@@ -213,6 +213,23 @@ final class SessionListViewModel: ObservableObject {
         }
     }
 
+    func openServerInNativeSplitView(_ server: DetectedServer, for session: GhosttySession) {
+        if isDummyDataMode {
+            NSWorkspace.shared.open(server.url)
+            return
+        }
+
+        Task {
+            do {
+                try await WindowArranger.openURLInNativeSplitView(server.url, beside: session)
+                lastError = nil
+            } catch {
+                NSWorkspace.shared.open(server.url)
+                lastError = error.localizedDescription
+            }
+        }
+    }
+
     func focusSelected() async {
         guard let selectedSession else { return }
         await focus(selectedSession)
