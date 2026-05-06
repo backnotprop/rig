@@ -44,6 +44,7 @@
 		B00000000000000000000029 /* WindowArranger.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000012E /* WindowArranger.swift */; };
 		B00000000000000000000030 /* ManagedGhosttyWindowRegistry.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000012F /* ManagedGhosttyWindowRegistry.swift */; };
 		B00000000000000000000031 /* PortMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000130 /* PortMonitor.swift */; };
+		B00000000000000000000032 /* WorktreeManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000131 /* WorktreeManager.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -100,6 +101,7 @@
 		A0000000000000000000012E /* WindowArranger.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WindowArranger.swift; sourceTree = "<group>"; };
 		A0000000000000000000012F /* ManagedGhosttyWindowRegistry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ManagedGhosttyWindowRegistry.swift; sourceTree = "<group>"; };
 		A00000000000000000000130 /* PortMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PortMonitor.swift; sourceTree = "<group>"; };
+		A00000000000000000000131 /* WorktreeManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorktreeManager.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -169,6 +171,7 @@
 				A0000000000000000000012E /* WindowArranger.swift */,
 				A0000000000000000000012F /* ManagedGhosttyWindowRegistry.swift */,
 				A00000000000000000000130 /* PortMonitor.swift */,
+				A00000000000000000000131 /* WorktreeManager.swift */,
 			);
 			path = Controllers;
 			sourceTree = "<group>";
@@ -380,6 +383,7 @@
 				B00000000000000000000028 /* SpaceSwitcher.swift in Sources */,
 				B00000000000000000000029 /* WindowArranger.swift in Sources */,
 				B00000000000000000000031 /* PortMonitor.swift in Sources */,
+				B00000000000000000000032 /* WorktreeManager.swift in Sources */,
 				B00000000000000000000030 /* ManagedGhosttyWindowRegistry.swift in Sources */,
 				B00000000000000000000003 /* ContentView.swift in Sources */,
 				B00000000000000000000004 /* SessionRowView.swift in Sources */,

@@ -83,8 +83,13 @@ struct ContentView: View {
         }
     }
 
-    private func launch(_ harness: Harness, bringToFront: Bool, prompt: String = "") {
-        let cwd = store.selectedProject?.path
+    private func launch(
+        _ harness: Harness,
+        bringToFront: Bool,
+        prompt: String = "",
+        worktreePath: String? = nil
+    ) {
+        let cwd = worktreePath ?? store.selectedProject?.path
         let projectID = store.selectedProject?.id
         let composed = HarnessSchemas.composedCommand(for: harness, prompt: prompt)
         Task {
@@ -160,12 +165,12 @@ struct ContentView: View {
             {
                 LauncherDrawer(
                     harness: harness,
-                    onRun: { prompt in
-                        launch(harness, bringToFront: true, prompt: prompt)
+                    onRun: { prompt, worktreePath in
+                        launch(harness, bringToFront: true, prompt: prompt, worktreePath: worktreePath)
                         closeDrawer()
                     },
-                    onBackground: { prompt in
-                        launch(harness, bringToFront: false, prompt: prompt)
+                    onBackground: { prompt, worktreePath in
+                        launch(harness, bringToFront: false, prompt: prompt, worktreePath: worktreePath)
                         closeDrawer()
                     },
                     onClose: closeDrawer

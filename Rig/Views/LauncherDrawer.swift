@@ -51,70 +51,31 @@ private final class SecondaryClickNSView: NSView {
 
 struct LauncherDrawer: View {
     let harness: Harness
-    let onRun: (String) -> Void
-    let onBackground: (String) -> Void
+    /// (prompt, worktreePath?) — worktreePath is non-nil when the user
+    /// enabled the worktree badge and the worktree was created successfully.
+    let onRun: (String, String?) -> Void
+    let onBackground: (String, String?) -> Void
     let onClose: () -> Void
 
     @EnvironmentObject private var store: ConfigStore
     @StateObject private var composer = PromptComposerController()
-    /// Which auxiliary panel is open beneath the action row, if any.
-    /// `"library"` for saved prompts, `provider.id` (e.g. `"github"`) for any
-    /// reference provider. Only one panel is open at a time so we don't blow
-    /// the drawer's vertical budget.
     @State private var openPanelID: String? = nil
+    @State private var worktreeEnabled: Bool = false
+    @State private var worktreeName: String = ""
+    @FocusState private var worktreeNameFocused: Bool
 
     private static let libraryPanelID = "library"
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            HStack(spacing: 8) {
-                LauncherIconView(harness: harness, size: 22)
-                Text(harness.label)
-                    .font(.system(size: 12, weight: .semibold))
-                Spacer(minLength: 0)
-                Button(action: onClose) {
-                    Image(systemName: "xmark")
-                        .font(.system(size: 9, weight: .semibold))
-                        .foregroundStyle(.tertiary)
-                        .frame(width: 18, height: 18)
-                        .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-                .help("Close")
-            }
-
-            ZStack(alignment: .topLeading) {
-                PromptComposer(
-                    controller: composer,
-                    onSubmit: { onRun(composer.composedString()) }
-                )
-                .padding(.horizontal, 8)
-                .padding(.vertical, 6)
-
-                if composer.isEmpty {
-                    Text("Optional prompt")
-                        .font(.system(size: 12))
-                        .foregroundStyle(.tertiary)
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 8)
-                        .allowsHitTesting(false)
-                }
-            }
-            .frame(minHeight: 28, maxHeight: 80)
-            .background(
-                RoundedRectangle(cornerRadius: 6, style: .continuous)
-                    .fill(Color.black.opacity(0.18))
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 6, style: .continuous)
-                    .stroke(Color.white.opacity(0.06), lineWidth: 0.5)
-            )
-
+            // Toolbar: icon + run + toggles + close. One row, no text labels.
             HStack(spacing: 6) {
+                LauncherIconView(harness: harness, size: 24)
+
                 DrawerActionButton(
                     tooltip: "Run",
                     systemImage: "play.fill",
-                    action: { onRun(composer.composedString()) }
+                    action: { runWithWorktree(bringToFront: true) }
                 )
                 // TODO(backgrounding): Re-enable when we ship a real "hide
                 // window" path. The whole pipeline below the button still
@@ -185,8 +146,33 @@ struct LauncherDrawer: View {
                         action: { togglePanel(provider.id) }
                     )
                 }
+
+                worktreeBadge
+
+                Spacer(minLength: 0)
+
+                Button(action: onClose) {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 9, weight: .semibold))
+                        .foregroundStyle(.tertiary)
+                        .frame(width: 18, height: 18)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .help("Close")
             }
 
+            // Worktree name — right below toolbar when badge is on
+            if worktreeEnabled {
+                TextField(defaultWorktreeName, text: $worktreeName)
+                    .textFieldStyle(.roundedBorder)
+                    .font(.system(size: 12))
+                    .controlSize(.small)
+                    .focused($worktreeNameFocused)
+                    .transition(.opacity.combined(with: .move(edge: .top)))
+            }
+
+            // Panels (conditional — progressive disclosure)
             if openPanelID == Self.libraryPanelID && !store.config.prompts.isEmpty {
                 PromptDockView(prompts: store.displayPrompts) { selected in
                     composer.insertText(selected.body)
@@ -217,6 +203,39 @@ struct LauncherDrawer: View {
                     )
                 )
             }
+
+            // Prompt input — only visible when there's content or a panel is
+            // open (user is composing something). Bare "just Run" needs zero setup.
+            if !composer.isEmpty || openPanelID != nil {
+                ZStack(alignment: .topLeading) {
+                    PromptComposer(
+                        controller: composer,
+                        onSubmit: { runWithWorktree(bringToFront: true) }
+                    )
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 6)
+
+                    if composer.isEmpty {
+                        Text("Prompt")
+                            .font(.system(size: 12))
+                            .foregroundStyle(.tertiary)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 8)
+                            .allowsHitTesting(false)
+                    }
+                }
+                .frame(minHeight: 28, maxHeight: 80)
+                .background(
+                    RoundedRectangle(cornerRadius: 6, style: .continuous)
+                        .fill(Color.black.opacity(0.18))
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 6, style: .continuous)
+                        .stroke(Color.white.opacity(0.06), lineWidth: 0.5)
+                )
+                .transition(.opacity.combined(with: .move(edge: .top)))
+            }
+
         }
         .padding(10)
         .background(
@@ -227,6 +246,66 @@ struct LauncherDrawer: View {
             RoundedRectangle(cornerRadius: 10, style: .continuous)
                 .stroke(Color.white.opacity(0.06), lineWidth: 0.5)
         )
+    }
+
+    private var defaultWorktreeName: String {
+        let label = harness.label.lowercased().replacingOccurrences(of: " ", with: "-")
+        let stamp = Self.worktreeTimestampFormatter.string(from: Date())
+        return "\(label)-\(stamp)"
+    }
+
+    private static let worktreeTimestampFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "yyyyMMdd-HHmmss"
+        return f
+    }()
+
+    private func runWithWorktree(bringToFront: Bool) {
+        let prompt = composer.composedString()
+        let callback = bringToFront ? onRun : onBackground
+
+        guard worktreeEnabled,
+              let projectPath = store.selectedProject?.path
+        else {
+            callback(prompt, nil)
+            return
+        }
+
+        let trimmed = worktreeName.trimmingCharacters(in: .whitespacesAndNewlines)
+        let name = trimmed.isEmpty ? defaultWorktreeName : trimmed
+        let location = store.config.preferences.worktreeLocation
+
+        Task {
+            let wtPath: String?
+            do {
+                let result = try await WorktreeManager.create(
+                    name: name, projectPath: projectPath, location: location
+                )
+                wtPath = result.path
+            } catch {
+                wtPath = nil
+            }
+            callback(prompt, wtPath)
+        }
+    }
+
+    private var worktreeBadge: some View {
+        DrawerActionButton(
+            tooltip: worktreeEnabled ? "Disable worktree" : "Create a worktree",
+            systemImage: "arrow.triangle.branch",
+            isActive: worktreeEnabled,
+            action: {
+                withAnimation(.snappy(duration: 0.18)) {
+                    worktreeEnabled.toggle()
+                }
+                if worktreeEnabled {
+                    DispatchQueue.main.async { worktreeNameFocused = true }
+                }
+            }
+        )
+        .onAppear {
+            worktreeEnabled = store.config.preferences.alwaysUseWorktrees
+        }
     }
 
     private func togglePanel(_ id: String) {

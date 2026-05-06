@@ -51,12 +51,16 @@ struct Preferences: Codable, Equatable {
     /// User-picked reference scopes per provider id, most-recent-first, capped
     /// at 5. Detected scopes don't go in here — only ones the user explicitly
     /// chose, so this list is "places I've intentionally looked at."
+    var alwaysUseWorktrees: Bool = false
+    var worktreeLocation: WorktreeLocation = .tmp
     var recentScopesByProvider: [String: [ReferenceScope]] = [:]
 
     private enum CodingKeys: String, CodingKey {
         case autohideRevealDelay, autohideAnimationDuration, autohideHideGracePeriod
         case autohideTriggerWidth, recentProjectIDs, selectedProjectID, promptSortOrder
-        case defaultLaunchMode, instantSpaceSwitching, recentScopesByProvider
+        case defaultLaunchMode, instantSpaceSwitching
+        case alwaysUseWorktrees, worktreeLocation
+        case recentScopesByProvider
     }
 
     init() {}
@@ -75,6 +79,8 @@ struct Preferences: Codable, Equatable {
         self.promptSortOrder = try c.decodeIfPresent(PromptSortOrder.self, forKey: .promptSortOrder) ?? .lastUsed
         self.defaultLaunchMode = try c.decodeIfPresent(LaunchMode.self, forKey: .defaultLaunchMode) ?? .launch
         self.instantSpaceSwitching = try c.decodeIfPresent(Bool.self, forKey: .instantSpaceSwitching) ?? true
+        self.alwaysUseWorktrees = try c.decodeIfPresent(Bool.self, forKey: .alwaysUseWorktrees) ?? false
+        self.worktreeLocation = try c.decodeIfPresent(WorktreeLocation.self, forKey: .worktreeLocation) ?? .tmp
         self.recentScopesByProvider = try c.decodeIfPresent([String: [ReferenceScope]].self, forKey: .recentScopesByProvider) ?? [:]
     }
 }
@@ -90,6 +96,18 @@ enum LaunchMode: String, Codable, CaseIterable, Equatable {
         switch self {
         case .launch: "Launch terminal into project"
         case .prompt: "Open prompt box"
+        }
+    }
+}
+
+enum WorktreeLocation: String, Codable, CaseIterable, Equatable {
+    case tmp
+    case parentDirectory
+
+    var label: String {
+        switch self {
+        case .tmp: "Temp directory"
+        case .parentDirectory: "Parent of project"
         }
     }
 }

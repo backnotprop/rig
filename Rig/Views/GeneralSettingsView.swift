@@ -47,6 +47,33 @@ struct GeneralSettingsView: View {
                         .controlSize(.small)
                     }
                 }
+
+                card {
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text("Worktrees")
+                            .font(.headline)
+
+                        Toggle(isOn: $store.config.preferences.alwaysUseWorktrees) {
+                            Text("Always use worktrees")
+                        }
+                        .toggleStyle(.switch)
+
+                        Text("When enabled, the worktree badge is on by default in the prompt box.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+
+                        Picker("Worktree location", selection: $store.config.preferences.worktreeLocation) {
+                            ForEach(WorktreeLocation.allCases, id: \.self) { loc in
+                                Text(loc.label).tag(loc)
+                            }
+                        }
+                        .pickerStyle(.radioGroup)
+
+                        Text("Where new worktrees are created. Temp is cleaned on reboot; parent directory keeps them alongside the project.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
             }
             .padding(20)
             .frame(maxWidth: .infinity, alignment: .leading)
