@@ -151,22 +151,30 @@ enum WindowArranger {
 
     static func openURLInNativeSplitView(_ url: URL, beside session: GhosttySession) async throws {
         let browserBundleID = defaultApplicationBundleIdentifier(for: url)
+        guard let ghosttyWindow = await resolveWindow(for: session) else {
+            throw SharedSpaceError.ghosttyWindowUnavailable
+        }
 
+        // TODO(native-split): This is intentionally not exposed in the UI.
+        // The least-broken prototype tiles Ghostty first on the left via
+        // Window > Full Screen Tile, then clicks the browser candidate on the
+        // right. That gets closest to native macOS Split View, but the picker
+        // click and later teardown back to normal windows are still flaky.
         // Establish a clean normal-window pair first. This makes the native
-        // Split View picker much more likely to show the intended Ghostty
+        // Split View picker much more likely to show the intended browser
         // candidate on the opposite side of the screen.
         try await openURLInSharedSpace(url, beside: session)
         try? await Task.sleep(for: .milliseconds(250))
 
-        guard triggerTileRightForApplication(bundleID: browserBundleID) else {
+        raise(ManagedGhosttyWindowRegistry.window(for: session.id) ?? ghosttyWindow)
+        guard triggerFullScreenTileForApplication(bundleID: "com.mitchellh.ghostty", side: .left) else {
             throw SharedSpaceError.browserWindowUnavailable
         }
 
         // macOS now owns the Split View picker. There is no public API to pick
-        // the second window, so this prototype clicks the Ghostty half after
+        // the second window, so this prototype clicks the browser half after
         // giving Mission Control time to expose the candidate windows.
-        try? await Task.sleep(for: .milliseconds(900))
-        clickLeftSplitCandidate()
+        clickSplitCandidate(.right)
     }
 
     private static func captureWindows(for sessions: [GhosttySession]) async -> [(session: GhosttySession, window: AXUIElement)] {
@@ -494,14 +502,26 @@ enum WindowArranger {
 
     // MARK: - Native Split View prototype
 
-    private static func triggerTileRightForApplication(bundleID: String?) -> Bool {
-        let itemNames = [
-            "Tile Window to Right of Screen",
-            "Tile Window to Right Side of Screen",
-            "Move Window to Right Side of Screen",
-            "Move Window to Right of Screen",
-        ]
+    private enum NativeSplitSide {
+        case left
+        case right
 
+        var menuItemTitle: String {
+            switch self {
+            case .left: "Left of Screen"
+            case .right: "Right of Screen"
+            }
+        }
+
+        var candidateClickFraction: CGFloat {
+            switch self {
+            case .left: 0.25
+            case .right: 0.75
+            }
+        }
+    }
+
+    private static func triggerFullScreenTileForApplication(bundleID: String?, side: NativeSplitSide) -> Bool {
         let bundleClause: String
         if let bundleID {
             bundleClause = """
@@ -518,7 +538,7 @@ enum WindowArranger {
             bundleClause = ""
         }
 
-        let itemList = itemNames.map(appleScriptLiteral).joined(separator: ", ")
+        let menuItemTitle = appleScriptLiteral(side.menuItemTitle)
         let source = """
         tell application "System Events"
             set targetProcess to missing value
@@ -529,12 +549,17 @@ enum WindowArranger {
 
             tell targetProcess
                 set frontmost to true
-                repeat with itemName in {\(itemList)}
+                tell menu "Window" of menu bar 1
                     try
-                        click menu item (itemName as text) of menu "Window" of menu bar 1
-                        return itemName as text
+                        click menu item \(menuItemTitle) of menu 1 of menu item "Full Screen Tile"
+                        return "Full Screen Tile > " & \(menuItemTitle)
                     end try
-                end repeat
+
+                    try
+                        click menu item \(menuItemTitle) of menu "Full Screen Tile" of menu item "Full Screen Tile"
+                        return "Full Screen Tile > " & \(menuItemTitle)
+                    end try
+                end tell
             end tell
         end tell
         """
@@ -553,10 +578,10 @@ enum WindowArranger {
         return true
     }
 
-    private static func clickLeftSplitCandidate() {
+    private static func clickSplitCandidate(_ side: NativeSplitSide) {
         guard let screen = NSScreen.main else { return }
 
-        let x = screen.frame.minX + screen.frame.width * 0.25
+        let x = screen.frame.minX + screen.frame.width * side.candidateClickFraction
         let y = screen.frame.height - (screen.frame.origin.y + screen.frame.height * 0.5)
         let point = CGPoint(x: x, y: y)
 
@@ -580,9 +605,15 @@ enum WindowArranger {
             mouseButton: .left
         )
 
-        move?.post(tap: .cghidEventTap)
-        down?.post(tap: .cghidEventTap)
-        up?.post(tap: .cghidEventTap)
+        Task {
+            for delay in [700, 350, 450] {
+                try? await Task.sleep(for: .milliseconds(delay))
+                move?.post(tap: .cghidEventTap)
+                down?.post(tap: .cghidEventTap)
+                up?.post(tap: .cghidEventTap)
+                Self.log("[ARRANGE] native split candidate click at \(point)")
+            }
+        }
     }
 
     // MARK: - AX helpers

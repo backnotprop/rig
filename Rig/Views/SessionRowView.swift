@@ -85,6 +85,14 @@ struct SessionRowView: View {
                         .buttonStyle(.plain)
                         .help("Open beside Ghostty")
 
+                        // TODO(native-split): Re-enable after the fullscreen
+                        // Split View prototype is reliable. The best version
+                        // drove macOS from Ghostty first (Full Screen Tile >
+                        // Left of Screen), then clicked the browser candidate
+                        // on the right. It still has flaky picker/teardown
+                        // behavior, so keep only the stable desktop split
+                        // button visible for now.
+                        /*
                         Button {
                             onOpenServerInNativeSplit(server)
                         } label: {
@@ -96,6 +104,7 @@ struct SessionRowView: View {
                         }
                         .buttonStyle(.plain)
                         .help("Open in native Split View")
+                        */
                     }
                 }
             }
