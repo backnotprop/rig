@@ -2,9 +2,7 @@
 
 Rig is a small macOS sidecar for Ghostty.
 
-It gives engineers a fast way to create, focus, arrange, and track terminal sessions across projects and coding harnesses.
-
-Rig is not a terminal emulator. It does not embed Ghostty. It controls real Ghostty windows through Ghostty AppleScript and macOS Accessibility APIs.
+It gives engineers a fast way to create, focus, arrange, and track terminal sessions across projects and coding harnesses. It controls real Ghostty windows through Ghostty AppleScript and macOS Accessibility APIs.
 
 ## Demo
 
