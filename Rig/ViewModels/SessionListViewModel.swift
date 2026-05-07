@@ -230,6 +230,21 @@ final class SessionListViewModel: ObservableObject {
         }
     }
 
+    func arrange(sessions: [GhosttySession], layout: WindowArranger.Layout) {
+        if isDummyDataMode {
+            return
+        }
+
+        Task {
+            do {
+                try await WindowArranger.arrange(sessions: sessions, layout: layout)
+                lastError = nil
+            } catch {
+                lastError = error.localizedDescription
+            }
+        }
+    }
+
     func focusSelected() async {
         guard let selectedSession else { return }
         await focus(selectedSession)

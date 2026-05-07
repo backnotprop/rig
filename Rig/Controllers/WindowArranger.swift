@@ -26,6 +26,7 @@ enum WindowArranger {
     private enum SharedSpaceError: LocalizedError {
         case ghosttyWindowUnavailable
         case browserWindowUnavailable
+        case accessibilityPermissionRequired
 
         var errorDescription: String? {
             switch self {
@@ -33,6 +34,8 @@ enum WindowArranger {
                 "Rig could not find that Ghostty window for split view."
             case .browserWindowUnavailable:
                 "Rig opened the URL, but could not find the browser window to arrange."
+            case .accessibilityPermissionRequired:
+                "Rig needs Accessibility permission to arrange windows. Open System Settings > Privacy & Security > Accessibility, enable Rig, then try again."
             }
         }
     }
@@ -46,8 +49,9 @@ enum WindowArranger {
 
     /// Arranges Rig's session windows by using Ghostty scripting IDs for
     /// identity and Accessibility only for native window state/placement.
-    static func arrange(sessions: [GhosttySession], layout: Layout) async {
+    static func arrange(sessions: [GhosttySession], layout: Layout) async throws {
         guard !sessions.isEmpty else { return }
+        try requireAccessibilityPermission()
 
         let captured = await captureWindows(for: sessions)
         Self.log("[ARRANGE] captured \(captured.count) windows for \(sessions.count) sessions")
@@ -120,6 +124,8 @@ enum WindowArranger {
     }
 
     static func openURLInSharedSpace(_ url: URL, beside session: GhosttySession) async throws {
+        try requireAccessibilityPermission()
+
         guard let ghosttyWindow = await resolveWindow(for: session) else {
             throw SharedSpaceError.ghosttyWindowUnavailable
         }
@@ -150,6 +156,8 @@ enum WindowArranger {
     }
 
     static func openURLInNativeSplitView(_ url: URL, beside session: GhosttySession) async throws {
+        try requireAccessibilityPermission()
+
         let browserBundleID = defaultApplicationBundleIdentifier(for: url)
         guard let ghosttyWindow = await resolveWindow(for: session) else {
             throw SharedSpaceError.ghosttyWindowUnavailable
@@ -617,6 +625,17 @@ enum WindowArranger {
     }
 
     // MARK: - AX helpers
+
+    private static func requireAccessibilityPermission() throws {
+        let options = [
+            "AXTrustedCheckOptionPrompt": true
+        ] as CFDictionary
+
+        guard AXIsProcessTrustedWithOptions(options) else {
+            Self.log("[ARRANGE] missing Accessibility permission for \(Bundle.main.bundlePath)")
+            throw SharedSpaceError.accessibilityPermissionRequired
+        }
+    }
 
     private static func isFullScreen(_ win: AXUIElement) -> Bool {
         var value: CFTypeRef?

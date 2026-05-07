@@ -256,11 +256,7 @@ struct ContentView: View {
     }
 
     private func arrangeWindows(_ layout: WindowArranger.Layout) {
-        let sessions = managedSessions
-
-        Task {
-            await WindowArranger.arrange(sessions: sessions, layout: layout)
-        }
+        viewModel.arrange(sessions: managedSessions, layout: layout)
     }
 
     private var managedSessions: [GhosttySession] {
