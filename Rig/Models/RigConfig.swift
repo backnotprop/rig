@@ -47,7 +47,7 @@ struct Preferences: Codable, Equatable {
     var selectedProjectID: UUID? = nil
     var promptSortOrder: PromptSortOrder = .lastUsed
     var defaultLaunchMode: LaunchMode = .launch
-    var instantSpaceSwitching: Bool = true
+    var instantSpaceSwitching: Bool = false
     /// User-picked reference scopes per provider id, most-recent-first, capped
     /// at 5. Detected scopes don't go in here — only ones the user explicitly
     /// chose, so this list is "places I've intentionally looked at."
@@ -78,7 +78,7 @@ struct Preferences: Codable, Equatable {
         self.selectedProjectID = try c.decodeIfPresent(UUID.self, forKey: .selectedProjectID)
         self.promptSortOrder = try c.decodeIfPresent(PromptSortOrder.self, forKey: .promptSortOrder) ?? .lastUsed
         self.defaultLaunchMode = try c.decodeIfPresent(LaunchMode.self, forKey: .defaultLaunchMode) ?? .launch
-        self.instantSpaceSwitching = try c.decodeIfPresent(Bool.self, forKey: .instantSpaceSwitching) ?? true
+        self.instantSpaceSwitching = try c.decodeIfPresent(Bool.self, forKey: .instantSpaceSwitching) ?? false
         self.alwaysUseWorktrees = try c.decodeIfPresent(Bool.self, forKey: .alwaysUseWorktrees) ?? false
         self.worktreeLocation = try c.decodeIfPresent(WorktreeLocation.self, forKey: .worktreeLocation) ?? .tmp
         self.recentScopesByProvider = try c.decodeIfPresent([String: [ReferenceScope]].self, forKey: .recentScopesByProvider) ?? [:]
