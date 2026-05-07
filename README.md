@@ -8,9 +8,9 @@ Rig is not a terminal emulator. It does not embed Ghostty. It controls real Ghos
 
 ## Demo
 
-[![Rig demo preview](docs/demo/rig-demo-preview.png)](docs/demo/rig-demo.mp4)
+![Rig demo preview](docs/demo/rig-demo-preview.png)
 
-[Watch the demo](docs/demo/rig-demo.mp4)
+https://github.com/user-attachments/assets/4eabc7a1-01ab-460b-bd5c-87b496cd4299
 
 ## What It Does
 
