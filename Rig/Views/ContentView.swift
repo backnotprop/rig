@@ -303,13 +303,15 @@ struct ContentView: View {
     }
 
     private func sessionRow(_ session: GhosttySession) -> some View {
-        Button {
+        let servers = viewModel.serversBySession[session.id] ?? []
+
+        return Button {
             viewModel.requestFocus(session)
         } label: {
             SessionRowView(
                 session: session,
                 isSelected: viewModel.selectedSessionID == session.id,
-                servers: viewModel.serversBySession[session.id] ?? [],
+                servers: servers,
                 onOpenServer: { server in
                     NSWorkspace.shared.open(server.url)
                 },
@@ -322,6 +324,7 @@ struct ContentView: View {
             )
         }
         .buttonStyle(.plain)
+        .id(sessionRowIdentity(session, servers: servers))
         .contextMenu {
             Button("Remove") {
                 viewModel.remove(session)
@@ -337,6 +340,11 @@ struct ContentView: View {
                 removal: .opacity
             )
         )
+    }
+
+    private func sessionRowIdentity(_ session: GhosttySession, servers: [DetectedServer]) -> String {
+        let serverIDs = servers.map(\.id).joined(separator: ",")
+        return "\(session.id.uuidString)|\(serverIDs)"
     }
 
     private var groupedSessions: [SessionGroup] {
