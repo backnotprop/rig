@@ -6,6 +6,12 @@ It gives engineers a fast way to create, focus, arrange, and track terminal sess
 
 Rig is not a terminal emulator. It does not embed Ghostty. It controls real Ghostty windows through Ghostty AppleScript and macOS Accessibility APIs.
 
+## Demo
+
+[![Rig demo preview](docs/demo/rig-demo-preview.png)](docs/demo/rig-demo.mp4)
+
+[Watch the demo](docs/demo/rig-demo.mp4)
+
 ## What It Does
 
 - Launch Ghostty sessions for configured harnesses
