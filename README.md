@@ -40,6 +40,10 @@ This builds, signs, and launches the local development app.
 
 This builds the distributable macOS app.
 
+## License
+
+Dual-licensed under MIT and Apache 2.0. See [LICENSE](LICENSE) and [LICENSE-APACHE](LICENSE-APACHE).
+
 ## Notes
 
 Rig keeps runtime session state in memory. Ghostty window IDs and Accessibility references are not durable across app or Ghostty restarts.

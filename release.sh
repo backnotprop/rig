@@ -62,13 +62,22 @@ xcodebuild \
 
 echo ""
 echo "==> Signing bundle..."
-codesign --force --deep --options runtime \
+codesign --force --options runtime \
+    --entitlements "$PROJECT_DIR/Rig/Rig.entitlements" \
     --sign "$SIGN_IDENTITY" "$APP"
 
 echo "==> Verifying signature..."
 codesign --verify --verbose=2 "$APP" 2>&1
 echo ""
 codesign -dv "$APP" 2>&1 | grep -E "Authority|Identifier|Signature|Runtime"
+
+echo ""
+echo "==> Verifying entitlements..."
+if ! codesign -d --entitlements - "$APP" 2>&1 | grep -q "com.apple.security.automation.apple-events"; then
+    echo "ERROR: apple-events entitlement missing from signed app!"
+    exit 1
+fi
+echo "  apple-events entitlement: present"
 
 echo ""
 echo "==> Creating DMG..."
